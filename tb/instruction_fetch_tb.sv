@@ -39,3 +39,4 @@ module inst_fetch_tb;
 
   // Assign program counter to next program counter
   assign pc_i = npc_o;
+endmodule

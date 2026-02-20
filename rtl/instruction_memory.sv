@@ -3,7 +3,7 @@ module instruction_memory(
   input  rst_ni,
   input [31:0] addr_i,
 
-  output logic [31:0] inst_o,
+  output logic [31:0] inst_o
 
 );
 
@@ -20,3 +20,4 @@ module instruction_memory(
   always_ff @(posedge clk_i) begin
     inst_mem_d <= inst_mem_q;
   end
+endmodule

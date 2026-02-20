@@ -5,7 +5,7 @@ module primus_instruction_fetch(
 
   // writer interface
   output logic [31:0]      ir_o,          // Instruction register
-  output logic [31:0]      npc_o,         // Next program counter
+  output logic [31:0]      npc_o          // Next program counter
 
 );
 
