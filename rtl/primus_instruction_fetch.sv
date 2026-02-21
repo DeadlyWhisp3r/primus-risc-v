@@ -17,32 +17,32 @@ module primus_instruction_fetch(
   inst_mem a_inst_mem (
   .clka(clk_i),    // input wire clka
   .wea('0),      // input wire [0 : 0] wea
-  .addra(pc_q),  // input wire [9 : 0] addra
+  .addra(pc_d),  // input wire [9 : 0] addra
   .dina('0),    // input wire [31 : 0] dina
-  .douta(ir_q)  // output wire [31 : 0] douta
+  .douta(ir_d)  // output wire [31 : 0] douta
 );
 
   // input assignments
-  assign pc_q    = pc_i;
+  assign pc_d    = pc_i;
 
   // output assignments
-  assign ir_o    = ir_d;
-  assign npc_o   = npc_d;
+  assign ir_o    = ir_q;
+  assign npc_o   = npc_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      pc_d  <= '0;
-      ir_d  <= 32'h00000013; // Resets to NOP
-      npc_d <= '0;
+      pc_q  <= '0;
+      ir_q  <= 32'h00000013; // Resets to NOP
+      npc_q <= '0;
     end else begin
-      pc_d  <= pc_q;
-      ir_d  <= ir_q;
-      npc_d <= npc_q;
+      pc_q  <= pc_d;
+      ir_q  <= ir_d;
+      npc_q <= npc_d;
     end
   end
 
   always_comb begin
-    npc_q = pc_d + 4; // Progress to next PC
+    npc_d = pc_q + 4; // Progress to next PC
   end
 
 endmodule 
