@@ -1,1 +1,24 @@
-.reference.sv
+# Style guide for SV
+reference.sv
+
+# Vivado Project Junk
+primus-risc-v.cache/
+primus-risc-v.gen/
+primus-risc-v.hw/
+primus-risc-v.runs/
+primus-risc-v.sim/
+primus-risc-v.ip_user_files/
+
+# Log and Journal files (generated every time you open Vivado)
+*.log
+*.jou
+*.pb
+*.str
+
+# Simulation temporary files
+xsim.dir/
+xvlog.pb
+xelab.pb
+
+# OS specific
+.DS_Store

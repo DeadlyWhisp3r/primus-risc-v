@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module primus_risc_v_top(
   // Input for top module
   input logic clk_i,

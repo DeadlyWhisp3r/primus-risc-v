@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module primus_instruction_fetch(
   input           clk_i,
   input           rst_ni,              // Active low reset
@@ -9,18 +11,19 @@ module primus_instruction_fetch(
 
 );
 
-  logic pc_d, pc_q, ir_d, ir_q;
+  logic [31:0] pc_d, pc_q, ir_d, ir_q, npc_d, npc_q;
 
   // Instantiate module instruction memory
-  instruction_memory a_inst_mem (
-    .clk_i  (clk_i),
-    .rst_i  (rst_ni),
-    .addr_i (pc_q),
-    .inst_o (ir_q)
-  );
+  inst_mem a_inst_mem (
+  .clka(clk_i),    // input wire clka
+  .wea('0),      // input wire [0 : 0] wea
+  .addra(pc_q),  // input wire [9 : 0] addra
+  .dina('0),    // input wire [31 : 0] dina
+  .douta(ir_q)  // output wire [31 : 0] douta
+);
 
   // input assignments
-  assign pc_d    = pc_i;
+  assign pc_q    = pc_i;
 
   // output assignments
   assign ir_o    = ir_d;
@@ -28,16 +31,18 @@ module primus_instruction_fetch(
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      pc_q <= '0;
-      ir_q <= '0;
+      pc_d  <= '0;
+      ir_d  <= 32'h00000013; // Resets to NOP
+      npc_d <= '0;
     end else begin
-      pc_q <= pc_d;
-      ir_q <= ir_d;
+      pc_d  <= pc_q;
+      ir_d  <= ir_q;
+      npc_d <= npc_q;
     end
   end
 
   always_comb begin
-    pc_q = pc_d + 4; // Progress to next PC
+    npc_q = pc_d + 4; // Progress to next PC
   end
 
 endmodule 

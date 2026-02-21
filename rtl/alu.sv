@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module primus_alu (
   input        clk_i,
   input        rst_ni,              // Active low reset
