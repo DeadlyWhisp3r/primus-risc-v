@@ -8,45 +8,48 @@ module id_regfile #(
   // Write enable
   input logic we_i,
   // Write address
-  input logic w_addr;
+  input logic [31:0] w_addr_i,
   // Write data
-  input logic [DATA_WIDTH-1] w_data,
+  input logic [DATA_WIDTH-1:0] w_data_i,
   // Address size of 6 bits = 64 registers
-  input logic [5:0] rs1_addr,
-  input logic [5:0] rs2_addr,
+  input logic [4:0] rs1_addr_i,
+  input logic [4:0] rs2_addr_i,
 
-  output logic [DATA_WIDTH-1] rs1_o,
-  output logic [DATA_WIDTH-1] rs2_o
+  output logic [DATA_WIDTH-1:0] rs1_o,
+  output logic [DATA_WIDTH-1:0] rs2_o
 );
 
   // Implement 31 integer registers skipping x0 since
   // it is hardwired to 0
-  logic [DATA_WIDTH-1] x_reg_q [31:1];
-  logic [DATA_WIDTH-1] x_reg_d [31:1];
-
-  // 32 floating point registers
-  logic [DATA_WIDTH-1] f_reg_q [31:1];
-  logic [DATA_WIDTH-1] f_reg_d [31:1];
+  logic [DATA_WIDTH-1:0] x_reg_q [31:1];
+  logic [DATA_WIDTH-1:0] x_reg_d [31:1];
 
   // Write logic
   always_comb begin
-    if(we_i && (w_addr != 0)) begin
-      // If the MSB of the addr is high -> write to the floating point registers
-      // else write to integer registers
-      if(w_addr[5]) begin
-        f_reg_d[w_addr] = w_data;
-      end else begin
-        x_reg_d[w_addr] = w_data;
-      end
+    // Default values
+    x_reg_d = x_reg_q;
+
+    if(we_i && (w_addr_i != 0)) begin
+      // Write to the integer register
+      x_reg_d[w_addr_i] = w_data_i;
     end
   end
 
   // Register functionality
-  always_ff@(posedge(clk_i) or negedge(rst_ni))
+  always_ff@(posedge(clk_i) or negedge(rst_ni)) begin
     if(!rst_ni) begin
-      x_reg_q <= '0;
-      f_reg_q <= '0;
-    else begin
-      x_reg_q <= x_reg_d;
-      f_reg_q <= f_reg_d;
+      for (int i = 1; i < 32; i++) begin
+        x_reg_q[i] <= '0; 
+      end
+    end else begin
+      for (int i = 1; i < 32; i++) begin
+        x_reg_q[i] <= x_reg_d[i]; 
+      end
     end
+  end
+  
+  // Read logic: If addr = 0 then x0 which is always 0 otherwise take the
+  // specific register
+  assign rs1_o = (rs1_addr_i == 5'b0) ? '0 : x_reg_q[rs1_addr_i];
+  assign rs2_o = (rs2_addr_i == 5'b0) ? '0 : x_reg_q[rs2_addr_i];
+endmodule

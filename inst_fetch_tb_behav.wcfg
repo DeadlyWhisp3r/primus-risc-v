@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="id_stage_tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="id_stage_tb" />
+            <top_module name="primus_core_pkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="516.078 ns"></ZoomEndTime>
+      <Cursor1Time time="418.776 ns"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="403"></NameColumnWidth>
+      <ValueColumnWidth column_width="154"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="50" />
+   <wvobject type="logic" fp_name="/id_stage_tb/clk">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/rst_n">
+      <obj_property name="ElementShortName">rst_n</obj_property>
+      <obj_property name="ObjectShortName">rst_n</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/npc_i">
+      <obj_property name="ElementShortName">npc_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/instr_i">
+      <obj_property name="ElementShortName">instr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">instr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/wb_w_addr_i">
+      <obj_property name="ElementShortName">wb_w_addr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_addr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/wb_w_data_i">
+      <obj_property name="ElementShortName">wb_w_data_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_data_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_rs1_o">
+      <obj_property name="ElementShortName">id_rs1_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs1_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_rs2_o">
+      <obj_property name="ElementShortName">id_rs2_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs2_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/npc_o">
+      <obj_property name="ElementShortName">npc_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/imm_o">
+      <obj_property name="ElementShortName">imm_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">imm_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_ctrl_o">
+      <obj_property name="ElementShortName">id_ctrl_o</obj_property>
+      <obj_property name="ObjectShortName">id_ctrl_o</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/test_mem">
+      <obj_property name="ElementShortName">test_mem[0:15][31:0]</obj_property>
+      <obj_property name="ObjectShortName">test_mem[0:15][31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/i">
+      <obj_property name="ElementShortName">i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">i[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/pc_i">
+      <obj_property name="ElementShortName">pc_i</obj_property>
+      <obj_property name="ObjectShortName">pc_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/a_id_stage/clk_i">
+      <obj_property name="ElementShortName">clk_i</obj_property>
+      <obj_property name="ObjectShortName">clk_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/a_id_stage/rst_ni">
+      <obj_property name="ElementShortName">rst_ni</obj_property>
+      <obj_property name="ObjectShortName">rst_ni</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/npc_i">
+      <obj_property name="ElementShortName">npc_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/instr_i">
+      <obj_property name="ElementShortName">instr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">instr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/wb_w_addr_i">
+      <obj_property name="ElementShortName">wb_w_addr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_addr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/wb_w_data_i">
+      <obj_property name="ElementShortName">wb_w_data_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_data_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs1_o">
+      <obj_property name="ElementShortName">id_rs1_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs1_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs2_o">
+      <obj_property name="ElementShortName">id_rs2_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs2_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/npc_o">
+      <obj_property name="ElementShortName">npc_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/imm_o">
+      <obj_property name="ElementShortName">imm_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">imm_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_ctrl_o">
+      <obj_property name="ElementShortName">id_ctrl_o</obj_property>
+      <obj_property name="ObjectShortName">id_ctrl_o</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs1_d">
+      <obj_property name="ElementShortName">id_rs1_d[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs1_d[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs1_q">
+      <obj_property name="ElementShortName">id_rs1_q[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs1_q[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs2_d">
+      <obj_property name="ElementShortName">id_rs2_d[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs2_d[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/id_rs2_q">
+      <obj_property name="ElementShortName">id_rs2_q[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs2_q[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/ctrl_d">
+      <obj_property name="ElementShortName">ctrl_d</obj_property>
+      <obj_property name="ObjectShortName">ctrl_d</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/ctrl_q">
+      <obj_property name="ElementShortName">ctrl_q</obj_property>
+      <obj_property name="ObjectShortName">ctrl_q</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/a_id_stage/wb_we_i">
+      <obj_property name="ElementShortName">wb_we_i</obj_property>
+      <obj_property name="ObjectShortName">wb_we_i</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/a_id_regfile/x_reg_q">
+      <obj_property name="ElementShortName">x_reg_q[31:1][63:0]</obj_property>
+      <obj_property name="ObjectShortName">x_reg_q[31:1][63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/a_id_regfile/x_reg_d">
+      <obj_property name="ElementShortName">x_reg_d[31:1][63:0]</obj_property>
+      <obj_property name="ObjectShortName">x_reg_d[31:1][63:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/clk">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/rst_n">
+      <obj_property name="ElementShortName">rst_n</obj_property>
+      <obj_property name="ObjectShortName">rst_n</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/npc_i">
+      <obj_property name="ElementShortName">npc_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/instr_i">
+      <obj_property name="ElementShortName">instr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">instr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/wb_w_addr_i">
+      <obj_property name="ElementShortName">wb_w_addr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_addr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/wb_w_data_i">
+      <obj_property name="ElementShortName">wb_w_data_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">wb_w_data_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_rs1_o">
+      <obj_property name="ElementShortName">id_rs1_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs1_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_rs2_o">
+      <obj_property name="ElementShortName">id_rs2_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">id_rs2_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/npc_o">
+      <obj_property name="ElementShortName">npc_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">npc_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/imm_o">
+      <obj_property name="ElementShortName">imm_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">imm_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/id_ctrl_o">
+      <obj_property name="ElementShortName">id_ctrl_o</obj_property>
+      <obj_property name="ObjectShortName">id_ctrl_o</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/test_mem">
+      <obj_property name="ElementShortName">test_mem[0:15][31:0]</obj_property>
+      <obj_property name="ObjectShortName">test_mem[0:15][31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/i">
+      <obj_property name="ElementShortName">i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/id_stage_tb/pc_i">
+      <obj_property name="ElementShortName">pc_i</obj_property>
+      <obj_property name="ObjectShortName">pc_i</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/a_id_regfile/rs1_addr_i">
+      <obj_property name="ElementShortName">rs1_addr_i[4:0]</obj_property>
+      <obj_property name="ObjectShortName">rs1_addr_i[4:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/id_stage_tb/a_id_stage/a_id_regfile/rs2_addr_i">
+      <obj_property name="ElementShortName">rs2_addr_i[4:0]</obj_property>
+      <obj_property name="ObjectShortName">rs2_addr_i[4:0]</obj_property>
+   </wvobject>
+</wave_config>

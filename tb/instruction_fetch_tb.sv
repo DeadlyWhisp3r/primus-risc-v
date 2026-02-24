@@ -13,7 +13,7 @@ module inst_fetch_tb;
   always #10 clk = ~clk;
 
   // Instantiate the DUT and connect the stimuli above
-  primus_instruction_fetch a_inst_fetch(
+  if_stage a_if_stage(
     .clk_i    (clk),
     .rst_ni   (rst_n),              // Active low reset
     .pc_i     (pc_i),               // Program counter 

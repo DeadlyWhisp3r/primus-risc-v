@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
+import primus_core_pkg::*;
 
-module primus_instruction_fetch(
+module if_stage (
   input           clk_i,
   input           rst_ni,              // Active low reset
   input  [31:0]   pc_i,                // Program counter
@@ -15,18 +16,18 @@ module primus_instruction_fetch(
 
   // Instantiate module instruction memory
   inst_mem a_inst_mem (
-  .clka(clk_i),    // input wire clka
-  .wea('0),      // input wire [0 : 0] wea
-  .addra(pc_d),  // input wire [9 : 0] addra
-  .dina('0),    // input wire [31 : 0] dina
-  .douta(ir_d)  // output wire [31 : 0] douta
-);
+    .clka(clk_i),    // input wire clka
+    .wea('0),        // input wire [0 : 0] wea
+    .addra(pc_d[11:2]),    // input wire [9 : 0] addra
+    .dina('0),       // input wire [31 : 0] dina
+    .douta(ir_d)     // output wire [31 : 0] douta
+  );
 
   // input assignments
   assign pc_d    = pc_i;
 
   // output assignments
-  assign ir_o    = ir_q;
+  assign ir_o    = ir_d; //BRAM already clocked and otherwise the data is already gone
   assign npc_o   = npc_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
