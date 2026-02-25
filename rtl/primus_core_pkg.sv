@@ -1,4 +1,4 @@
-package primus_core_pkg;
+jackage primus_core_pkg;
   typedef enum logic[6:0] {
     OP = 'b0110011,
     OP_IMM = 'b0010011,
@@ -13,11 +13,28 @@ package primus_core_pkg;
   } opcode_e;
 
   // ALU Operations
-  typedef enum logic [1:0] {
-    ALU_ADD        = 2'b00, // Addition
-    ALU_SUB        = 2'b01, // Subtraction
-    ALU_FROM_FUNCT = 2'b10, // Get values funct3/funct7
-    ALU_PASS_B     = 2'b11  // Pass input B straight to ALU output
+  typedef enum logic [3:0] {
+    // Basic Arithmetic
+    ALU_ADD  = 4'b0000, // Addition: Result = A + B
+    ALU_SUB  = 4'b0001, // Subtraction: Result = A - B
+
+    // Logical Operations
+    ALU_XOR  = 4'b0010, // Bitwise XOR: Result = A ^ B
+    ALU_OR   = 4'b0011, // Bitwise OR: Result = A | B
+    ALU_AND  = 4'b0100, // Bitwise AND: Result = A & B
+
+    // Shifts (Logical and Arithmetic)
+    ALU_SLL  = 4'b0101, // Shift Left Logical: Result = A << B[4:0]
+    ALU_SRL  = 4'b0110, // Shift Right Logical: Result = A >> B[4:0] (Zero extended)
+    ALU_SRA  = 4'b0111, // Shift Right Arithmetic: Result = $signed(A) >>> B[4:0] (Sign extended)
+                        // Used to divide negative numbers, keeping their sign
+
+    // Comparisons (Used for SLT/SLTI instructions)
+    ALU_SLT  = 4'b1000, // Set Less Than (Signed): Result = (A < B) ? 1 : 0
+    ALU_SLTU = 4'b1001, // Set Less Than (Unsigned): Result = (A <u B) ? 1 : 0
+
+    // Special/Pass-through
+    ALU_COPY_B = 4'b1010  // Pass Operand B: Result = B (Useful for LUI/AUIPC)
   } alu_op_e;
 
   // Write-back Source
@@ -27,20 +44,31 @@ package primus_core_pkg;
     WB_PC4  = 2'b10  // Write PC+4 to rd (for Jumps)
   } wb_sel_e;
 
+  typedef enum logic {
+    ALU_A_RS1 = 1'b0,
+    ALU_A_PC  = 1'b1
+  } alu_a_sel_e;
+
+  typedef enum logic {
+    ALU_B_RS2 = 1'b0,
+    ALU_B_IMM = 1'b1
+  } alu_b_sel_e;
+
   // Control signals to be sent to the execute stage
   typedef struct packed {
     // --- ex_stage signals ---
-    logic     alu_src;     // ALU operand: 0 = rs2, 1 = Immediate
-    alu_op_e  alu_op;      // ALU operation: ALU_ADD = add, ALU_SUB = sub, ALU_FROM_FUNCT= use funct3/7, ALU_PASS_B == pass-through rs2 or imm
+    alu_a_sel_e  alu_a_sel;     // ALU operand A
+    alu_b_sel_e  alu_b_sel;     // ALU operand B
+    alu_op_e     alu_op;      // ALU operation: defined above
     // --- mem_stage signals ---
-    logic     mem_read;    // Enable read from Data Memory (Load)
-    logic     mem_write;   // Enable write to Data Memory (Store)
+    logic        mem_read;    // Enable read from Data Memory (Load)
+    logic        mem_write;   // Enable write to Data Memory (Store)
     // --- wb_stage signals ---
-    logic     reg_write;   // Enable signal for writing back into id_regfile
-    wb_sel_e  wb_sel;      // Data used for rd: WB_ALU = ALU result, WB_MEM = Memory data, WB_PC4 = PC + 4
+    logic        reg_write;   // Enable signal for writing back into id_regfile
+    wb_sel_e     wb_sel;      // Data used for rd: WB_ALU = ALU result, WB_MEM = Memory data, WB_PC4 = PC + 4
     // --- flow control signals ---
-    logic     is_branch;   // High for branches
-    logic     is_jump;      // High for jumps
+    logic        is_branch;   // High for branches
+    logic        is_jump;      // High for jumps
   } ctrl_t;
 
   typedef enum logic [2:0] {

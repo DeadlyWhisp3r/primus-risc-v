@@ -2,13 +2,15 @@
 import primus_core_pkg::*;
 
 module if_stage (
-  input           clk_i,
-  input           rst_ni,              // Active low reset
-  input  [31:0]   pc_i,                // Program counter
+  input logic         clk_i,
+  input logic         rst_ni,    // Active low reset
+  // Flush the pipeline, usually a branch taken -> grabage in the pipe
+  input logic         pipeline_flush,
+  input logic [31:0]  pc_i,      // Program counter
 
   // writer interface
-  output logic [31:0]      ir_o,          // Instruction register
-  output logic [31:0]      npc_o          // Next program counter
+  output logic [31:0] ir_o,      // Instruction register
+  output logic [31:0] npc_o      // Next program counter
 
 );
 
@@ -16,11 +18,11 @@ module if_stage (
 
   // Instantiate module instruction memory
   inst_mem a_inst_mem (
-    .clka(clk_i),    // input wire clka
-    .wea('0),        // input wire [0 : 0] wea
-    .addra(pc_d[11:2]),    // input wire [9 : 0] addra
-    .dina('0),       // input wire [31 : 0] dina
-    .douta(ir_d)     // output wire [31 : 0] douta
+    .clka  (clk_i),       // input wire clka
+    .wea   ('0),          // input wire [0 : 0] wea
+    .addra (pc_d[11:2]),  // input wire [9 : 0] addra
+    .dina  ('0),          // input wire [31 : 0] dina
+    .douta (ir_d)         // output wire [31 : 0] douta
   );
 
   // input assignments
@@ -31,7 +33,8 @@ module if_stage (
   assign npc_o   = npc_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
+    // Active low reset and pipeline flush
+    if(!rst_ni || pipeline_flush) begin
       pc_q  <= '0;
       ir_q  <= 32'h00000013; // Resets to NOP
       npc_q <= '0;

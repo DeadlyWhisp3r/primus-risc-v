@@ -14,6 +14,7 @@ module id_stage_tb;
 
   logic [31:0] id_rs1_o;
   logic [31:0] id_rs2_o;
+  logic [4:0]  id_rd_addr_o;
   logic [31:0] npc_o;
   logic [31:0] imm_o;
   ctrl_t id_ctrl_o;
@@ -36,6 +37,7 @@ module id_stage_tb;
     .wb_we_i     (wb_we_i),
     .id_rs1_o    (id_rs1_o),
     .id_rs2_o    (id_rs2_o),
+    .id_rd_addr_o(id_rd_addr_o),
     .npc_o       (npc_o),
     .imm_o       (imm_o),
     .id_ctrl_o   (id_ctrl_o)
