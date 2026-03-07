@@ -1,4 +1,4 @@
-jackage primus_core_pkg;
+package primus_core_pkg;
   typedef enum logic[6:0] {
     OP = 'b0110011,
     OP_IMM = 'b0010011,
@@ -11,6 +11,17 @@ jackage primus_core_pkg;
     AUIPC = 'b0010111,
     SYSTEM = 'b1110011
   } opcode_e;
+
+  // Branch operations
+  typedef enum logic [2:0] {
+    BR_NONE,  // No branch
+    BR_EQ,    // Equal (BEQ)
+    BR_NE,    // Not Equal (BNE)
+    BR_LT,    // Less Than (BLT)
+    BR_GE,    // Greater or Equal (BGE)
+    BR_LTU,   // Less Than Unsigned (BLTU)
+    BR_GEU    // Greater or Equal Unsigned (BGEU)
+  } br_op_e;
 
   // ALU Operations
   typedef enum logic [3:0] {
@@ -60,6 +71,7 @@ jackage primus_core_pkg;
     alu_a_sel_e  alu_a_sel;     // ALU operand A
     alu_b_sel_e  alu_b_sel;     // ALU operand B
     alu_op_e     alu_op;      // ALU operation: defined above
+    br_op_e      alu_br_op;
     // --- mem_stage signals ---
     logic        mem_read;    // Enable read from Data Memory (Load)
     logic        mem_write;   // Enable write to Data Memory (Store)

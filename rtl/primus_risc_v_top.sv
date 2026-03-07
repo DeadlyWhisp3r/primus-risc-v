@@ -20,6 +20,22 @@ module primus_risc_v_top(
 
   logic         ex_pipeline_flush;
 
+  // Data Mem signals
+  logic [31:0] dmem_addr;
+  logic [31:0] dmem_wdata;
+  logic [31:0] dmem_rdata;
+  logic        dmem_we;
+  // ECC Error Signals (Unused since ECC is disabled)
+  logic dmem_dbiterra;
+  logic dmem_sbiterra;
+
+  // Mem stage output signals
+  logic [31:0] mem_rdata;
+  logic [31:0] mem_alu_res;
+  logic [4:0]  mem_rd_addr;
+  logic        mem_reg_write;
+  wb_sel_e     mem_wb_sel;
+
   // Instruction fetch stage
   if_stage a_if_stage (
     .clk_i            (clk_i),
@@ -35,7 +51,7 @@ module primus_risc_v_top(
     .clk_i            (clk_i),
     .rst_ni           (rst_ni),
     .pipeline_flush_i (ex_pipeline_flush),
-    .npc_i            (if_npc),
+    .id_npc_i            (if_npc),
     .instr_i          (if_ir),
     .wb_w_addr_i      ('b0),
     .wb_w_data_i      ('b0),
@@ -62,5 +78,94 @@ module primus_risc_v_top(
     .ex_alu_res_o     (ex_alu_res),
     .ex_pipeline_flush_o (ex_pipeline_flush),
     .ex_wb_sel_o      (wb_sel_o)
+  );
+
+    mem_stage a_mem_stage (
+    .clk_i            (clk_i),
+    .rst_ni           (rst_ni),
+
+    .mem_wb_sel_i     (ex_wb_sel),
+    .mem_alu_res_i    (ex_alu_res),     // Used as RAM address
+    .mem_rs2_data_i   (ex_rs2_data),    // Data to be stored
+    .mem_rd_addr_i    (ex_rd_addr),
+    .mem_write_i      (ex_mem_write),   // Control signal for RAM WE
+    .mem_reg_write_i  (ex_reg_write),
+
+    // Interface to Data RAM (Combinational)
+    .mem_ram_addr_o   (dmem_addr),
+    .mem_ram_wdata_o  (dmem_wdata),
+    .mem_ram_we_o     (dmem_we),
+    .mem_ram_rdata_i  (dmem_rdata),
+
+    // Outputs to WB Stage Boundary (Inputs to MEM/WB Reg)
+    .mem_rdata_o      (mem_rdata),
+    .mem_alu_res_o    (mem_alu_res),
+    .mem_rd_addr_o    (mem_rd_addr),
+    .mem_reg_write_o  (mem_reg_write),
+    .mem_wb_sel_o     (mem_wb_sel)
+  );
+
+   // Instanciate the DATA MEM using Xilinx XMP
+   // xpm_memory_spram: Single Port RAM
+   // Xilinx Parameterized Macro, version 2025.2
+
+   xpm_memory_spram #(
+      .ADDR_WIDTH_A(6),              // 2^6 = 64 words
+      .AUTO_SLEEP_TIME(0),           // DECIMAL
+      .BYTE_WRITE_WIDTH_A(32),       // DECIMAL
+      .CASCADE_HEIGHT(0),            // DECIMAL
+      .ECC_BIT_RANGE("7:0"),         // String
+      .ECC_MODE("no_ecc"),           // String
+      .ECC_TYPE("none"),             // String
+      .IGNORE_INIT_SYNTH(0),         // DECIMAL
+      .MEMORY_INIT_FILE("none"),     // String
+      .MEMORY_INIT_PARAM("0"),       // String
+      .MEMORY_OPTIMIZATION("true"),  // String
+      .MEMORY_PRIMITIVE("auto"),     // String
+      .MEMORY_SIZE(2048),            // 64 words * 32 bits = 2048
+      .MESSAGE_CONTROL(0),           // DECIMAL
+      .RAM_DECOMP("auto"),           // String
+      .READ_DATA_WIDTH_A(32),        // DECIMAL
+      .READ_LATENCY_A(1),            // Set to one so data is ready in the next CC
+      .READ_RESET_VALUE_A("0"),      // String
+      .RST_MODE_A("SYNC"),           // String
+      .SIM_ASSERT_CHK(0),            // DECIMAL; 0=disable simulation messages, 1=enable simulation messages
+      .USE_MEM_INIT(1),              // DECIMAL
+      .USE_MEM_INIT_MMI(0),          // DECIMAL
+      .WAKEUP_TIME("disable_sleep"), // String
+      .WRITE_DATA_WIDTH_A(32),       // DECIMAL
+      .WRITE_MODE_A("read_first"),   // String
+      .WRITE_PROTECT(1)              // DECIMAL
+   )
+   xpm_memory_spram_inst (
+      .dbiterra(dmem_dbiterra),             // 1-bit output: Status signal to indicate double bit error occurrence on the data output of port A.
+      .douta(dmem_rdata),                   // READ_DATA_WIDTH_A-bit output: Data output for port A read operations.
+      .sbiterra(dmem_sbiterra),             // 1-bit output: Status signal to indicate single bit error occurrence on the data output of port A.
+      .addra(dmem_addr[7:2]),          // ADDR_WIDTH_A-bit input: Address for port A write and read operations.
+      .clka(clk_i),                    // 1-bit input: Clock signal for port A.
+      .dina(dmem_wdata),                     // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
+      // Always enabled for simplicity
+      .ena(1'b1),                      // 1-bit input: Memory enable signal for port A. Must be high on clock cycles when read or write operations
+                                       // are initiated. Pipelined internally.
+
+      .injectdbiterra(1'b0), // 1-bit input: Controls double bit error injection on input data when ECC enabled (Error injection capability
+                                       // is not available in "decode_only" mode).
+
+      .injectsbiterra(1'b0), // 1-bit input: Controls single bit error injection on input data when ECC enabled (Error injection capability
+                                       // is not available in "decode_only" mode).
+
+      .regcea(1'b1),                 // 1-bit input: Clock Enable for the last register stage on the output data path.
+      .rsta(!rst_ni),                     // 1-bit input: Reset signal for the final port A output register stage. Synchronously resets output port
+                                       // douta to the value specified by parameter READ_RESET_VALUE_A.
+
+      .sleep(1'b0),                   // 1-bit input: sleep signal to enable the dynamic power saving feature.
+      .wea(dmem_we)                        // WRITE_DATA_WIDTH_A/BYTE_WRITE_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit
+                                       // wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one
+                                       // byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when
+                                       // WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
+
+   );
+
+   // End of xpm_memory_spram_inst instantiation
 
 endmodule

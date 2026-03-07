@@ -128,16 +128,16 @@ always_comb begin
           ctrl_d.alu_a_sel = ALU_A_PC;
           ctrl_d.alu_b_sel = ALU_B_IMM; // Use Immediate for address calculation
           ctrl_d.alu_op    = ALU_ADD;   // Target = PC + Imm
-          ctrl_d.br_op = BR_NONE;
+          ctrl_d.alu_br_op = BR_NONE;
 
           // Define which comparison the separate comparator should do
           case (funct3)
-              3'b000: ctrl_d.br_op = BR_EQ;
-              3'b001: ctrl_d.br_op = BR_NE;
-              3'b100: ctrl_d.br_op = BR_LT;
-              3'b101: ctrl_d.br_op = BR_GE;
-              3'b110: ctrl_d.br_op = BR_LTU;
-              3'b111: ctrl_d.br_op = BR_GEU;
+              3'b000: ctrl_d.alu_br_op = BR_EQ;
+              3'b001: ctrl_d.alu_br_op = BR_NE;
+              3'b100: ctrl_d.alu_br_op = BR_LT;
+              3'b101: ctrl_d.alu_br_op = BR_GE;
+              3'b110: ctrl_d.alu_br_op = BR_LTU;
+              3'b111: ctrl_d.alu_br_op = BR_GEU;
           endcase
       end
 
@@ -157,6 +157,9 @@ always_comb begin
       JAL: begin
           ctrl_d.reg_write = 1;
           ctrl_d.is_jump   = 1;
+          ctrl_d.alu_a_sel = ALU_A_PC;
+          ctrl_d.alu_b_sel = ALU_B_IMM;
+          ctrl_d.alu_op    = ALU_ADD;
           ctrl_d.wb_sel    = WB_PC4; // Save return address
       end
 
@@ -202,7 +205,7 @@ always_comb begin
   end
 
   always_comb begin
-    npc_d = npc_i;
+    npc_d = id_npc_i;
   end
 
   always_ff @(negedge(rst_ni) or posedge(clk_i)) begin
