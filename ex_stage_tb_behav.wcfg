@@ -3,55 +3,86 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="ex_stage_tb_behav.wdb" id="1">
+      <db_ref path="mem_stage_tb_behav.wdb" id="1">
          <top_modules>
-            <top_module name="ex_stage_tb" />
             <top_module name="glbl" />
+            <top_module name="mem_stage_tb" />
             <top_module name="primus_core_pkg" />
          </top_modules>
       </db_ref>
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0.000 ns"></ZoomStartTime>
-      <ZoomEndTime time="26.785 ns"></ZoomEndTime>
-      <Cursor1Time time="21.422 ns"></Cursor1Time>
+      <ZoomEndTime time="156.001 ns"></ZoomEndTime>
+      <Cursor1Time time="156.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="403"></NameColumnWidth>
-      <ValueColumnWidth column_width="150"></ValueColumnWidth>
+      <ValueColumnWidth column_width="146"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="8" />
-   <wvobject type="logic" fp_name="/ex_stage_tb/clk_i">
+   <WVObjectSize size="16" />
+   <wvobject type="logic" fp_name="/mem_stage_tb/clk_i">
       <obj_property name="ElementShortName">clk_i</obj_property>
       <obj_property name="ObjectShortName">clk_i</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/ex_stage_tb/rst_ni">
+   <wvobject type="logic" fp_name="/mem_stage_tb/rst_ni">
       <obj_property name="ElementShortName">rst_ni</obj_property>
       <obj_property name="ObjectShortName">rst_ni</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_npc_i">
-      <obj_property name="ElementShortName">ex_npc_i[31:0]</obj_property>
-      <obj_property name="ObjectShortName">ex_npc_i[31:0]</obj_property>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_wb_sel_i">
+      <obj_property name="ElementShortName">mem_wb_sel_i[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_sel_i[1:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_rs1_i">
-      <obj_property name="ElementShortName">ex_rs1_i[31:0]</obj_property>
-      <obj_property name="ObjectShortName">ex_rs1_i[31:0]</obj_property>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_alu_res_i">
+      <obj_property name="ElementShortName">mem_alu_res_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_alu_res_i[31:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_rs2_i">
-      <obj_property name="ElementShortName">ex_rs2_i[31:0]</obj_property>
-      <obj_property name="ObjectShortName">ex_rs2_i[31:0]</obj_property>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_rs2_data_i">
+      <obj_property name="ElementShortName">mem_rs2_data_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_rs2_data_i[31:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_imm_i">
-      <obj_property name="ElementShortName">ex_imm_i[31:0]</obj_property>
-      <obj_property name="ObjectShortName">ex_imm_i[31:0]</obj_property>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_rd_addr_i">
+      <obj_property name="ElementShortName">mem_rd_addr_i[4:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_rd_addr_i[4:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_ctrl_i">
-      <obj_property name="ElementShortName">ex_ctrl_i</obj_property>
-      <obj_property name="ObjectShortName">ex_ctrl_i</obj_property>
-      <obj_property name="isExpanded"></obj_property>
+   <wvobject type="logic" fp_name="/mem_stage_tb/mem_we_i">
+      <obj_property name="ElementShortName">mem_we_i</obj_property>
+      <obj_property name="ObjectShortName">mem_we_i</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/ex_stage_tb/ex_alu_res_o">
-      <obj_property name="ElementShortName">ex_alu_res_o[31:0]</obj_property>
-      <obj_property name="ObjectShortName">ex_alu_res_o[31:0]</obj_property>
+   <wvobject type="array" fp_name="/mem_stage_tb/dmem_rdata">
+      <obj_property name="ElementShortName">dmem_rdata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">dmem_rdata[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/dmem_addr">
+      <obj_property name="ElementShortName">dmem_addr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">dmem_addr[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/dmem_wdata">
+      <obj_property name="ElementShortName">dmem_wdata[31:0]</obj_property>
+      <obj_property name="ObjectShortName">dmem_wdata[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/mem_stage_tb/dmem_we">
+      <obj_property name="ElementShortName">dmem_we</obj_property>
+      <obj_property name="ObjectShortName">dmem_we</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_wb_rdata_o">
+      <obj_property name="ElementShortName">mem_wb_rdata_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_rdata_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_wb_alu_res_o">
+      <obj_property name="ElementShortName">mem_wb_alu_res_o[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_alu_res_o[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_wb_rd_addr_o">
+      <obj_property name="ElementShortName">mem_wb_rd_addr_o[4:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_rd_addr_o[4:0]</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/mem_stage_tb/mem_wb_we_o">
+      <obj_property name="ElementShortName">mem_wb_we_o</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_we_o</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/mem_stage_tb/mem_wb_sel_o">
+      <obj_property name="ElementShortName">mem_wb_sel_o[1:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_wb_sel_o[1:0]</obj_property>
    </wvobject>
 </wave_config>

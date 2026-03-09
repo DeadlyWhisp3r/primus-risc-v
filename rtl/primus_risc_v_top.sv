@@ -81,28 +81,28 @@ module primus_risc_v_top(
   );
 
     mem_stage a_mem_stage (
-    .clk_i            (clk_i),
-    .rst_ni           (rst_ni),
+    .clk_i                (clk_i),
+    .rst_ni               (rst_ni),
 
-    .mem_wb_sel_i     (ex_wb_sel),
-    .mem_alu_res_i    (ex_alu_res),     // Used as RAM address
-    .mem_rs2_data_i   (ex_rs2_data),    // Data to be stored
-    .mem_rd_addr_i    (ex_rd_addr),
-    .mem_write_i      (ex_mem_write),   // Control signal for RAM WE
-    .mem_reg_write_i  (ex_reg_write),
+    .mem_wb_sel_i         (ex_wb_sel),
+    .mem_alu_res_i        (ex_alu_res),     // Used as RAM address
+    .mem_rs2_data_i       (ex_rs2_data),    // Data to be stored
+    .mem_reg_rd_addr_i    (ex_rd_addr),
+    .mem_ram_write_i      (ex_mem_write),   // Control signal for RAM WE
+    .mem_reg_write_i      (ex_reg_write),
 
     // Interface to Data RAM (Combinational)
-    .mem_ram_addr_o   (dmem_addr),
-    .mem_ram_wdata_o  (dmem_wdata),
-    .mem_ram_we_o     (dmem_we),
-    .mem_ram_rdata_i  (dmem_rdata),
+    .mem_ram_addr_o       (dmem_addr),
+    .mem_ram_wdata_o      (dmem_wdata),
+    .mem_ram_we_o         (dmem_we),
+    .mem_ram_rdata_i      (dmem_rdata),
 
     // Outputs to WB Stage Boundary (Inputs to MEM/WB Reg)
-    .mem_rdata_o      (mem_rdata),
-    .mem_alu_res_o    (mem_alu_res),
-    .mem_rd_addr_o    (mem_rd_addr),
-    .mem_reg_write_o  (mem_reg_write),
-    .mem_wb_sel_o     (mem_wb_sel)
+    .mem_rdata_o          (mem_rdata),
+    .mem_alu_res_o        (mem_alu_res),
+    .mem_rd_addr_o        (mem_rd_addr),
+    .mem_reg_write_o      (mem_reg_write),
+    .mem_wb_sel_o         (mem_wb_sel)
   );
 
    // Instanciate the DATA MEM using Xilinx XMP
