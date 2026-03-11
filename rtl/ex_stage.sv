@@ -2,14 +2,14 @@
 import primus_core_pkg::*;
 
 module ex_stage(
-  input               clk_i,
-  input               rst_ni,
-  input [31:0]        ex_npc_i,
+  input logic         clk_i,
+  input logic         rst_ni,
+  input logic [31:0]  ex_npc_i,
   // Input of source registers rs1 & rs2 NOTE: possibly namned a and b instead
-  input [31:0]        ex_rs1_i,
-  input [31:0]        ex_rs2_i,
+  input logic [31:0]  ex_rs1_i,
+  input logic [31:0]  ex_rs2_i,
   // Address of the register to write results to
-  input [4:0]         ex_rd_addr_i,
+  input logic [4:0]   ex_rd_addr_i,
   // Immediate value
   input logic [31:0]  ex_imm_i,
   // Control signals for ex-stage
@@ -21,10 +21,14 @@ module ex_stage(
   output logic        ex_pc_sel_o,
   // The target address for the instruction if branch is taken
   output logic [31:0] ex_target_pc_o,
+  // Storing the operand rs2 in the memory
+  output logic [31:0] ex_rs2_o,
   // The result of out of the ALU
   output logic [31:0] ex_alu_res_o,
   // Address of where to write the results in the WB stage
   output logic [4:0]  ex_rd_addr_o,
+  // Write enable for the Data memory
+  output logic        ex_mem_we_o,
   // Write enable for register file (WB stage)
   output logic        ex_reg_write_o,
   // Signal to flush the IF and ID stage if branch is taken since they have
@@ -41,6 +45,7 @@ module ex_stage(
   logic [31:0] target_pc_d,      target_pc_q;
   logic [31:0] alu_res_d,        alu_res_q;
   logic [4:0]  rd_addr_d,        rd_addr_q;
+  logic        mem_we_d,         mem_we_q;
   logic        reg_write_d,      reg_write_q;
   logic        pipeline_flush_d, pipeline_flush_q;
   wb_sel_e     wb_sel_d,         wb_sel_q;
@@ -64,6 +69,7 @@ module ex_stage(
   assign pipeline_flush_d    = ex_pc_sel_o; 
   assign npc_d               = ex_npc_i;
   assign rd_addr_d           = ex_rd_addr_i;
+  assign mem_we_d            = ex_ctrl_i.mem_write;
   assign reg_write_d         = ex_ctrl_i.reg_write;
   assign wb_sel_d            = ex_ctrl_i.wb_sel;
 
@@ -71,6 +77,7 @@ module ex_stage(
   assign ex_pc_sel_o         = pc_sel_q;
   assign ex_npc_o            = npc_q;
   assign ex_rd_addr_o        = rd_addr_q;
+  assign ex_mem_we_o         = mem_we_q;
   assign ex_reg_write_o      = reg_write_q;
   assign ex_wb_sel_o         = wb_sel_q;
   assign ex_pipeline_flush_o = pipeline_flush_q;
@@ -102,6 +109,7 @@ module ex_stage(
       target_pc_q      <= 32'b0;
       alu_res_q        <= 32'b0;
       rd_addr_q        <= 5'b0;
+      mem_we_q         <= 1'b0;
       reg_write_q      <= 1'b0;
       pipeline_flush_q <= 1'b0;
       wb_sel_q         <= WB_ALU; // Default enum value
@@ -111,6 +119,7 @@ module ex_stage(
       target_pc_q      <= target_pc_d;
       alu_res_q        <= alu_res_d;
       rd_addr_q        <= rd_addr_d;
+      mem_we_q         <= mem_we_d;
       reg_write_q      <= reg_write_d;
       pipeline_flush_q <= pipeline_flush_d;
       wb_sel_q         <= wb_sel_d;

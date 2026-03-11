@@ -5,7 +5,7 @@ module if_stage (
   input logic         clk_i,
   input logic         rst_ni,    // Active low reset
   // Flush the pipeline, usually a branch taken -> grabage in the pipe
-  input logic         pipeline_flush,
+  input logic         pipeline_flush_i,
   input logic [31:0]  pc_i,      // Program counter
 
   // writer interface
@@ -17,12 +17,29 @@ module if_stage (
   logic [31:0] pc_d, pc_q, ir_d, ir_q, npc_d, npc_q;
 
   // Instantiate module instruction memory
-  inst_mem a_inst_mem (
-    .clka  (clk_i),       // input wire clka
-    .wea   ('0),          // input wire [0 : 0] wea
-    .addra (pc_d[11:2]),  // input wire [9 : 0] addra
-    .dina  ('0),          // input wire [31 : 0] dina
-    .douta (ir_d)         // output wire [31 : 0] douta
+  // XPM Single Port RAM for Instruction Memory
+  xpm_memory_spram #(
+    .ADDR_WIDTH_A        (10),              // 1024 words = 10 bits
+    .MEMORY_PRIMITIVE    ("block"),         // Use BRAM
+    .MEMORY_SIZE         (32768),           // 1024 words * 32 bits = 32768 bits
+    .READ_DATA_WIDTH_A   (32),              // RISC-V Instruction width
+    .READ_LATENCY_A      (1),               // 1 clock cycle latency
+    .WRITE_DATA_WIDTH_A  (32),
+    .MEMORY_INIT_FILE    ("instructions.mem"), // The file we created earlier
+    .MEMORY_INIT_PARAM   ("0"),
+    .USE_MEM_INIT        (1)                // Enable memory initialization
+  ) a_inst_mem (
+    .clka   (clk_i),
+    .rsta   (~rst_ni),                      // Active high reset for XPM
+    .ena    (1'b1),                         // Always enabled
+    .wea    (1'b0),                         // Read-only
+    .addra  (pc_d[11:2]),                   // Word-aligned address
+    .dina   (32'b0),
+    .douta  (ir_d),                         // Data out to Decode stage
+    .regcea (1'b1),
+    .injectdbiterra(1'b0),
+    .injectsbiterra(1'b0),
+    .sleep  (1'b0)
   );
 
   // input assignments
@@ -34,7 +51,7 @@ module if_stage (
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     // Active low reset and pipeline flush
-    if(!rst_ni || pipeline_flush) begin
+    if(!rst_ni || pipeline_flush_i) begin
       pc_q  <= '0;
       ir_q  <= 32'h00000013; // Resets to NOP
       npc_q <= '0;

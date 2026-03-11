@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 package primus_core_pkg;
   typedef enum logic[6:0] {
     OP = 'b0110011,

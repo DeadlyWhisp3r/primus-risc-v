@@ -2,8 +2,10 @@
 import primus_core_pkg::*;
 
 module mem_stage(
-  input               clk_i,
-  input               rst_ni,
+  input logic         clk_i,
+  input logic         rst_ni,
+  input logic         pipeline_flush_i,
+  input logic [31:0]  mem_npc_i,
   // MUX sel to write ALU result, MEM data or PC+4
   input wb_sel_e      mem_wb_sel_i,
   // The address for the load/store
@@ -16,7 +18,7 @@ module mem_stage(
   input logic         mem_ram_we_i,
   // Write enable for the WB stage to write to the register file, low for
   // stores, branches, etc.
-  input logic         mem_we_i,
+  input logic         mem_reg_we_i,
 
   // Signals for the Memory place in the top module
   // Data read from the RAM
@@ -31,6 +33,7 @@ module mem_stage(
   output logic [31:0] mem_wb_rdata_o,
   // WB can choose to write either the mem_rdata or alu_res
   output logic [31:0] mem_wb_alu_res_o,
+  output logic [31:0] mem_npc_o,
   output logic [4:0]  mem_wb_rd_addr_o,
   output logic        mem_wb_we_o,
   output wb_sel_e     mem_wb_sel_o
@@ -38,6 +41,7 @@ module mem_stage(
 );
 
   logic [31:0] mem_wb_rdata_d,   mem_wb_rdata_q;
+  logic [31:0] mem_npc_d, mem_npc_q;
   logic [31:0] mem_wb_alu_res_d, mem_wb_alu_res_q;
   logic [4:0]  mem_wb_rd_addr_d, mem_wb_rd_addr_q;
   logic        mem_wb_we_d,  mem_wb_we_q;
@@ -46,8 +50,10 @@ module mem_stage(
   // Assignment of next value for the clocked signals to WB stage
   assign mem_wb_rdata_d     = mem_ram_rdata_i;
   assign mem_wb_alu_res_d   = mem_alu_res_i;
+  assign mem_npc_d          = mem_npc_i;
+  
   assign mem_wb_rd_addr_d   = mem_rd_addr_i;
-  assign mem_wb_we_d        = mem_we_i;
+  assign mem_wb_we_d        = mem_reg_we_i;
   assign mem_wb_sel_d       = mem_wb_sel_i;
 
   // Drive external RAM
@@ -58,20 +64,24 @@ module mem_stage(
 
   // Clocked signals for the WB stage
   assign mem_wb_rdata_o   = mem_wb_rdata_q;
+  assign mem_npc_o        = mem_npc_q;
+
   assign mem_wb_alu_res_o = mem_wb_alu_res_q;
   assign mem_wb_rd_addr_o = mem_wb_rd_addr_q;
   assign mem_wb_we_o   = mem_wb_we_q;
   assign mem_wb_sel_o  = mem_wb_sel_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni) begin
+    if (!rst_ni || pipeline_flush_i) begin
       mem_wb_rdata_q   <= 32'b0;
+      mem_npc_q        <= 32'b0;
       mem_wb_alu_res_q <= 32'b0;
       mem_wb_rd_addr_q <= 5'b0;
       mem_wb_we_q      <= 1'b0;
       mem_wb_sel_q     <= WB_ALU;
     end else begin
       mem_wb_rdata_q   <= mem_wb_rdata_d;
+      mem_npc_q        <= mem_npc_d;
       mem_wb_alu_res_q <= mem_wb_alu_res_d;
       mem_wb_rd_addr_q <= mem_wb_rd_addr_d;
       mem_wb_we_q      <= mem_wb_we_d;

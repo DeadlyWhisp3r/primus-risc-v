@@ -5,11 +5,11 @@ module id_stage(
   input clk_i,
   input rst_ni,
   // Flush the pipeline, usually a branch taken -> grabage in the pipe
-  input pipeline_flush,
+  input pipeline_flush_i,
   input [31:0] id_npc_i,
   input [31:0] instr_i,
   // Write-back input, value to be stored from wb-stage
-  input [31:0] wb_w_addr_i,
+  input [4:0]  wb_w_addr_i,
   input [31:0] wb_w_data_i,
   input        wb_we_i,
   
@@ -210,7 +210,7 @@ always_comb begin
 
   always_ff @(negedge(rst_ni) or posedge(clk_i)) begin
     // Active low reset and pipeline flush
-    if(!rst_ni || pipeline_flush) begin
+    if(!rst_ni || pipeline_flush_i) begin
       id_rs1_q     <= 'b0;
       id_rs2_q     <= 'b0;
       id_rd_addr_q <= 'b0;

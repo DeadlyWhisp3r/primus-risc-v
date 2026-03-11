@@ -1,14 +1,14 @@
 `timescale 1ns / 1ps
 
 module id_regfile #(
-  parameter DATA_WIDTH = 64
+  parameter DATA_WIDTH = 32
 )(
   input logic clk_i,
   input logic rst_ni,
   // Write enable
   input logic we_i,
   // Write address
-  input logic [31:0] w_addr_i,
+  input logic [4:0] w_addr_i,
   // Write data
   input logic [DATA_WIDTH-1:0] w_data_i,
   // Address size of 6 bits = 64 registers

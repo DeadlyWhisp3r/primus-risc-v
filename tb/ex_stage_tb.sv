@@ -14,6 +14,7 @@ module ex_stage_tb();
     // Outputs
     logic [31:0] ex_npc_o, ex_target_pc_o, ex_alu_res_o;
     logic        ex_pc_sel_o, ex_reg_write_o, ex_pipeline_flush_o;
+    logic [31:0] ex_rs2_o;
     logic [4:0]  ex_rd_addr_o;
     wb_sel_e     ex_wb_sel_o;
 
@@ -29,6 +30,7 @@ module ex_stage_tb();
         .ex_npc_o            (ex_npc_o),
         .ex_pc_sel_o         (ex_pc_sel_o),
         .ex_target_pc_o      (ex_target_pc_o),
+        .ex_rs2_o            (ex_rs2_o),
         .ex_alu_res_o        (ex_alu_res_o),
         .ex_rd_addr_o        (ex_rd_addr_o),
         .ex_reg_write_o      (ex_reg_write_o),

@@ -8,33 +8,56 @@ module primus_risc_v_top(
 );
 
 
+  // Instruction fetch signals
   logic [31:0]  pc;
   logic [31:0]  if_ir;
   logic [31:0]  if_npc;
 
+  // Instruction decode signals
   logic [31:0]  id_rs1;
   logic [31:0]  id_rs2;
   logic [4:0]   id_rd_addr;
   logic [31:0]  id_npc;
   logic [31:0]  id_imm;
+  ctrl_t        id_ctrl;
 
+  // Execute stage signals
   logic         ex_pipeline_flush;
+  logic [31:0]  ex_npc;
+  logic         ex_pc_sel;
+  logic [31:0]  ex_target_pc;
+  logic [31:0]  ex_rs2;
+  logic [31:0]  ex_alu_res;
+  logic [4:0]   ex_rd_addr;
+  logic         ex_mem_we;
+  logic         ex_reg_write;
+  wb_sel_e      ex_wb_sel;
 
-  // Data Mem signals
-  logic [31:0] dmem_addr;
-  logic [31:0] dmem_wdata;
-  logic [31:0] dmem_rdata;
-  logic        dmem_we;
+  // Signals to the Data memory
+  logic [31:0]  dmem_addr;
+  logic [31:0]  dmem_wdata;
+  logic [31:0]  dmem_rdata;
+  logic         dmem_we;
   // ECC Error Signals (Unused since ECC is disabled)
   logic dmem_dbiterra;
   logic dmem_sbiterra;
 
   // Mem stage output signals
   logic [31:0] mem_rdata;
+  logic [31:0] mem_npc;
   logic [31:0] mem_alu_res;
   logic [4:0]  mem_rd_addr;
   logic        mem_reg_write;
   wb_sel_e     mem_wb_sel;
+
+  // Write back stage output signals
+  logic [31:0] wb_data;
+  logic [4:0]  wb_rd_addr;
+  logic        wb_id_we;
+
+  // Assignments
+  // Mux to select next PC, high = branch taken
+  assign pc = ex_pc_sel ? ex_target_pc : if_npc;
 
   // Instruction fetch stage
   if_stage a_if_stage (
@@ -53,8 +76,9 @@ module primus_risc_v_top(
     .pipeline_flush_i (ex_pipeline_flush),
     .id_npc_i            (if_npc),
     .instr_i          (if_ir),
-    .wb_w_addr_i      ('b0),
-    .wb_w_data_i      ('b0),
+    .wb_w_addr_i      (wb_rd_addr),
+    .wb_w_data_i      (wb_data),
+    .wb_we_i          (wb_id_we),
     .id_rs1_o         (id_rs1),
     .id_rs2_o         (id_rs2),
     .id_rd_addr_o     (id_rd_addr),
@@ -64,44 +88,50 @@ module primus_risc_v_top(
   );
 
   ex_stage a_ex_stage (
-    .clk_i            (clk_i),
-    .rst_ni           (rst_ni),
-    .ex_npc_i         (id_npc),
-    .ex_rs1_i         (id_rs1),
-    .ex_rs2_i         (id_rs2),
-    .ex_rd_addr_i     (id_rd_addr),
-    .ex_imm_i         (id_imm),
-    .ex_ctrl_i        (id_ctrl),
-    .ex_npc_o         (ex_npc),
-    .ex_pc_sel_o      (ex_pc_sel),
-    .ex_target_pc_o   (ex_target_pc),
-    .ex_alu_res_o     (ex_alu_res),
+    .clk_i               (clk_i),
+    .rst_ni              (rst_ni),
+    .ex_npc_i            (id_npc),
+    .ex_rs1_i            (id_rs1),
+    .ex_rs2_i            (id_rs2),
+    .ex_rd_addr_i        (id_rd_addr),
+    .ex_imm_i            (id_imm),
+    .ex_ctrl_i           (id_ctrl),
+    .ex_npc_o            (ex_npc),
+    .ex_pc_sel_o         (ex_pc_sel),
+    .ex_target_pc_o      (ex_target_pc),
+    .ex_rs2_o            (ex_rs2),
+    .ex_alu_res_o        (ex_alu_res),
+    .ex_rd_addr_o        (ex_rd_addr),
+    .ex_mem_we_o         (ex_mem_we),
+    .ex_reg_write_o      (ex_reg_write),
     .ex_pipeline_flush_o (ex_pipeline_flush),
-    .ex_wb_sel_o      (wb_sel_o)
+    .ex_wb_sel_o         (ex_wb_sel)
   );
 
     mem_stage a_mem_stage (
     .clk_i                (clk_i),
     .rst_ni               (rst_ni),
-
+    .pipeline_flush_i     (ex_pipeline_flush),
+    .mem_npc_i            (ex_npc),
     .mem_wb_sel_i         (ex_wb_sel),
     .mem_alu_res_i        (ex_alu_res),     // Used as RAM address
-    .mem_rs2_data_i       (ex_rs2_data),    // Data to be stored
-    .mem_reg_rd_addr_i    (ex_rd_addr),
-    .mem_ram_write_i      (ex_mem_write),   // Control signal for RAM WE
-    .mem_reg_write_i      (ex_reg_write),
+    .mem_rs2_data_i       (ex_rs2),    // Data to be stored
+    .mem_rd_addr_i        (ex_rd_addr),
+    .mem_ram_we_i         (ex_mem_we),   // Control signal for RAM WE
+    .mem_reg_we_i         (ex_reg_write),
 
     // Interface to Data RAM (Combinational)
+    .mem_ram_rdata_i      (dmem_rdata),
     .mem_ram_addr_o       (dmem_addr),
     .mem_ram_wdata_o      (dmem_wdata),
     .mem_ram_we_o         (dmem_we),
-    .mem_ram_rdata_i      (dmem_rdata),
 
     // Outputs to WB Stage Boundary (Inputs to MEM/WB Reg)
-    .mem_rdata_o          (mem_rdata),
-    .mem_alu_res_o        (mem_alu_res),
-    .mem_rd_addr_o        (mem_rd_addr),
-    .mem_reg_write_o      (mem_reg_write),
+    .mem_wb_rdata_o          (mem_rdata),
+    .mem_wb_alu_res_o        (mem_alu_res),
+    .mem_npc_o               (mem_npc),
+    .mem_wb_rd_addr_o        (mem_rd_addr),
+    .mem_wb_we_o          (mem_reg_write),
     .mem_wb_sel_o         (mem_wb_sel)
   );
 
@@ -168,4 +198,18 @@ module primus_risc_v_top(
 
    // End of xpm_memory_spram_inst instantiation
 
-endmodule
+  wb_stage a_wb_stage (
+    .wb_rdata_i    (mem_rdata),
+    .wb_npc_i      (mem_npc),
+    .wb_alu_res_i  (mem_alu_res),
+    .wb_rd_addr_i  (mem_rd_addr),
+    .wb_we_i       (ex_reg_write),
+    .wb_sel_i      (mem_wb_sel),
+
+  // Data written to the register file
+    .wb_data_o     (wb_data),
+    .wb_rd_addr_o  (wb_rd_addr),
+    .wb_we_o       (wb_id_we)
+);
+
+  endmodule
