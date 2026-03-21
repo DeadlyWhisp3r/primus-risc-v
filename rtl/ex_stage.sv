@@ -14,6 +14,10 @@ module ex_stage(
   input logic [31:0]  ex_imm_i,
   // Control signals for ex-stage
   input ctrl_t        ex_ctrl_i,
+  // Signals for Forwarding to solve Data Hazards
+  input logic [31:0]  ex_ex_fwd_rs2_i,
+  input logic [31:0]  ex_mem_fwd_rs2_i,
+  input logic [4:0]   ex_rs2_reg_addr_i,
 
   // Next program counter
   output logic [31:0] ex_npc_o,
@@ -42,28 +46,44 @@ module ex_stage(
   // Pipeline register signals
   logic [31:0] npc_d,            npc_q;
   logic        pc_sel_d,         pc_sel_q;
-  logic [31:0] target_pc_d,      target_pc_q;
   logic [31:0] alu_res_d,        alu_res_q;
   logic [4:0]  rd_addr_d,        rd_addr_q;
+  logic [4:0]  rd_addr_q2,       rd_addr_q3;
   logic        mem_we_d,         mem_we_q;
   logic        reg_write_d,      reg_write_q;
   logic        pipeline_flush_d, pipeline_flush_q;
   wb_sel_e     wb_sel_d,         wb_sel_q;
+  logic        ex_ex_addr_match;
+  logic        ex_mem_addr_match;
 
   // Internal signals
   logic [31:0] alu_in_a;
   logic [31:0] alu_in_b;
   logic        br_taken;
-  
+
+  assign ex_ex_addr_match  = (ex_rs2_reg_addr_i == rd_addr_q2);
+  assign ex_mem_addr_match = (ex_rs2_reg_addr_i == rd_addr_q3);
+
   assign alu_in_a = (ex_ctrl_i.alu_a_sel == ALU_A_PC) ? ex_npc_i : ex_rs1_i;
-  assign alu_in_b = (ex_ctrl_i.alu_b_sel == ALU_B_IMM) ? ex_imm_i : ex_rs2_i;
-  
+
+  always_comb begin
+    // Default assignment
+    alu_in_b = ex_rs2_i;
+    if (ALU_B_IMM) begin
+      alu_in_b = ex_imm_i;
+      // Data forwarding logic
+    end else begin
+      if (ex_ex_addr_match) begin
+        alu_in_b = ex_ex_fwd_rs2_i;
+      end
+      if (ex_mem_addr_match) begin
+        alu_in_b = ex_mem_fwd_rs2_i;
+      end
+    end
+  end
+
   // Signal if there is a instruction jump or just increment by 4
   assign pc_sel_d = (ex_ctrl_i.is_branch && br_taken) || ex_ctrl_i.is_jump;
-
-  // The next address for branching or jump is calculated by the ALU
-  // uses the immediate or rs2 register
-  assign target_pc_d         = alu_res_d;
 
   // Internal clocked signals next state
   assign pipeline_flush_d    = ex_pc_sel_o; 
@@ -81,6 +101,12 @@ module ex_stage(
   assign ex_reg_write_o      = reg_write_q;
   assign ex_wb_sel_o         = wb_sel_q;
   assign ex_pipeline_flush_o = pipeline_flush_q;
+  // The next address for branching or jump is calculated by the ALU
+  // uses the immediate or rs2 register assign ex_alu_res_o        = alu_res_q;
+  assign ex_target_pc_o      = alu_res_q;
+
+  // Value to be written to the Data mem
+  assign ex_rs2_o            = alu_in_b;
 
   // Branch Comparator Logic
   always_comb begin
@@ -99,16 +125,17 @@ module ex_stage(
     .alu_op_i   (ex_ctrl_i.alu_op),
     .op_a_i  (alu_in_a),
     .op_b_i  (alu_in_b),
-    .alu_res_o (ex_alu_res_o)
+    .alu_res_o (alu_res_d)
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
       npc_q            <= 32'b0;
       pc_sel_q         <= 1'b0;
-      target_pc_q      <= 32'b0;
       alu_res_q        <= 32'b0;
       rd_addr_q        <= 5'b0;
+      rd_addr_q2       <= 5'b0;
+      rd_addr_q3       <= 5'b0;
       mem_we_q         <= 1'b0;
       reg_write_q      <= 1'b0;
       pipeline_flush_q <= 1'b0;
@@ -116,9 +143,10 @@ module ex_stage(
     end else begin
       npc_q            <= npc_d;
       pc_sel_q         <= pc_sel_d;
-      target_pc_q      <= target_pc_d;
       alu_res_q        <= alu_res_d;
       rd_addr_q        <= rd_addr_d;
+      rd_addr_q2       <= rd_addr_q;
+      rd_addr_q3       <= rd_addr_q2;
       mem_we_q         <= mem_we_d;
       reg_write_q      <= reg_write_d;
       pipeline_flush_q <= pipeline_flush_d;

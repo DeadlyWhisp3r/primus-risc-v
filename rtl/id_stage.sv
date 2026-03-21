@@ -16,8 +16,10 @@ module id_stage(
   // Output of source registers rs1 & rs2
   output [31:0] id_rs1_o,
   output [31:0] id_rs2_o,
+  // Address of the source operand rs2, used for forwarding
+  output [4:0]  id_rs2_addr_o,
   // The address of where the result will be written
-  output [4:0] id_rd_addr_o,
+  output [4:0]  id_rd_addr_o,
   // Next program counter
   output [31:0] npc_o,
   // Immediate value

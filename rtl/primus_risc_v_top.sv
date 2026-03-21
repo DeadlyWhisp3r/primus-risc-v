@@ -16,6 +16,7 @@ module primus_risc_v_top(
   // Instruction decode signals
   logic [31:0]  id_rs1;
   logic [31:0]  id_rs2;
+  logic [4:0]   id_rs2_addr;
   logic [4:0]   id_rd_addr;
   logic [31:0]  id_npc;
   logic [31:0]  id_imm;
@@ -74,13 +75,14 @@ module primus_risc_v_top(
     .clk_i            (clk_i),
     .rst_ni           (rst_ni),
     .pipeline_flush_i (ex_pipeline_flush),
-    .id_npc_i            (if_npc),
+    .id_npc_i         (if_npc),
     .instr_i          (if_ir),
     .wb_w_addr_i      (wb_rd_addr),
     .wb_w_data_i      (wb_data),
     .wb_we_i          (wb_id_we),
     .id_rs1_o         (id_rs1),
     .id_rs2_o         (id_rs2),
+    .id_rs2_addr_o    (id_rs2_addr),
     .id_rd_addr_o     (id_rd_addr),
     .npc_o            (id_npc),
     .imm_o            (id_imm),
@@ -95,6 +97,9 @@ module primus_risc_v_top(
     .ex_rs2_i            (id_rs2),
     .ex_rd_addr_i        (id_rd_addr),
     .ex_imm_i            (id_imm),
+    .ex_ex_fwd_rs2_i     (ex_alu_res),
+    .ex_mem_fwd_rs2_i    (mem_rdata),
+    .ex_rs2_reg_addr_i   (id_rs2_addr),
     .ex_ctrl_i           (id_ctrl),
     .ex_npc_o            (ex_npc),
     .ex_pc_sel_o         (ex_pc_sel),
@@ -127,10 +132,10 @@ module primus_risc_v_top(
     .mem_ram_we_o         (dmem_we),
 
     // Outputs to WB Stage Boundary (Inputs to MEM/WB Reg)
-    .mem_wb_rdata_o          (mem_rdata),
-    .mem_wb_alu_res_o        (mem_alu_res),
-    .mem_npc_o               (mem_npc),
-    .mem_wb_rd_addr_o        (mem_rd_addr),
+    .mem_wb_rdata_o       (mem_rdata),
+    .mem_wb_alu_res_o     (mem_alu_res),
+    .mem_npc_o            (mem_npc),
+    .mem_wb_rd_addr_o     (mem_rd_addr),
     .mem_wb_we_o          (mem_reg_write),
     .mem_wb_sel_o         (mem_wb_sel)
   );
