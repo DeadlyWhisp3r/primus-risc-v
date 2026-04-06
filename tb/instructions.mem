@@ -8,5 +8,5 @@
 00018113 // PC 0x1C: addi x2, x3, 0
 00428293 // PC 0x20: addi x5, x5, 4
 fff50513 // PC 0x24: addi x10, x10, -1
-fe0518e3 // PC 0x28: bne x10, x0, -16 (Goes to 0x10)
+fe0514e3 // PC 0x28: bne x10, x0, -24 (Goes to 0x10)
 0000006f // PC 0x2C: jal x0, 0 (Halt/Trap)

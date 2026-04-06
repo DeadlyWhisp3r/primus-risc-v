@@ -10,7 +10,8 @@ module if_stage (
 
   // writer interface
   output logic [31:0] ir_o,      // Instruction register
-  output logic [31:0] npc_o      // Next program counter
+  output logic [31:0] pc_o,      // Current PC (for branch/jump target calculation)
+  output logic [31:0] npc_o      // Next program counter (PC+4)
 
 );
 
@@ -47,23 +48,24 @@ module if_stage (
 
   // output assignments
   assign ir_o    = ir_d; //BRAM already clocked and otherwise the data is already gone
+  assign pc_o    = pc_q;
   assign npc_o   = npc_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    // Active low reset and pipeline flush
-    if(!rst_ni || pipeline_flush_i) begin
+    if(!rst_ni) begin
       pc_q  <= '0;
       ir_q  <= 32'h00000013; // Resets to NOP
       npc_q <= '0;
     end else begin
       pc_q  <= pc_d;
-      ir_q  <= ir_d;
       npc_q <= npc_d;
+      // On pipeline flush insert a NOP to squash the speculatively fetched instruction
+      ir_q  <= pipeline_flush_i ? 32'h00000013 : ir_d;
     end
   end
 
   always_comb begin
-    npc_d = pc_q + 4; // Progress to next PC
+    npc_d = pc_d + 4; // Progress to next PC
   end
 
 endmodule 

@@ -4,6 +4,7 @@ import primus_core_pkg::*;
 module ex_stage(
   input logic         clk_i,
   input logic         rst_ni,
+  input logic [31:0]  ex_pc_i,
   input logic [31:0]  ex_npc_i,
   // Input of source registers rs1 & rs2 NOTE: possibly namned a and b instead
   input logic [31:0]  ex_rs1_i,
@@ -15,6 +16,9 @@ module ex_stage(
   // Control signals for ex-stage
   input ctrl_t        ex_ctrl_i,
   // Signals for Forwarding to solve Data Hazards
+  input logic [31:0]  ex_ex_fwd_rs1_i,
+  input logic [31:0]  ex_mem_fwd_rs1_i,
+  input logic [4:0]   ex_rs1_reg_addr_i,
   input logic [31:0]  ex_ex_fwd_rs2_i,
   input logic [31:0]  ex_mem_fwd_rs2_i,
   input logic [4:0]   ex_rs2_reg_addr_i,
@@ -53,32 +57,56 @@ module ex_stage(
   logic        reg_write_d,      reg_write_q;
   logic        pipeline_flush_d, pipeline_flush_q;
   wb_sel_e     wb_sel_d,         wb_sel_q;
+  logic        ex_ex_rs1_addr_match;
+  logic        ex_mem_rs1_addr_match;
   logic        ex_ex_addr_match;
   logic        ex_mem_addr_match;
 
   // Internal signals
   logic [31:0] alu_in_a;
   logic [31:0] alu_in_b;
+  logic [31:0] fwd_rs1;
+  logic [31:0] fwd_rs2;
   logic        br_taken;
 
-  assign ex_ex_addr_match  = (ex_rs2_reg_addr_i == rd_addr_q2);
-  assign ex_mem_addr_match = (ex_rs2_reg_addr_i == rd_addr_q3);
+  assign ex_ex_rs1_addr_match  = (ex_rs1_reg_addr_i == rd_addr_q);
+  assign ex_mem_rs1_addr_match = (ex_rs1_reg_addr_i == rd_addr_q2);
+  assign ex_ex_addr_match      = (ex_rs2_reg_addr_i == rd_addr_q);
+  assign ex_mem_addr_match     = (ex_rs2_reg_addr_i == rd_addr_q2);
 
-  assign alu_in_a = (ex_ctrl_i.alu_a_sel == ALU_A_PC) ? ex_npc_i : ex_rs1_i;
+  // Forwarded rs1 — used by branch comparator regardless of alu_a_sel
+  always_comb begin
+    fwd_rs1 = ex_rs1_i;
+    if (ex_ex_rs1_addr_match) begin
+      fwd_rs1 = ex_ex_fwd_rs1_i;
+    end else if (ex_mem_rs1_addr_match) begin
+      fwd_rs1 = ex_mem_fwd_rs1_i;
+    end
+  end
+
+  // Forwarded rs2 — used by branch comparator and STORE data path
+  always_comb begin
+    fwd_rs2 = ex_rs2_i;
+    if (ex_ex_addr_match) begin
+      fwd_rs2 = ex_ex_fwd_rs2_i;
+    end else if (ex_mem_addr_match) begin
+      fwd_rs2 = ex_mem_fwd_rs2_i;
+    end
+  end
 
   always_comb begin
-    // Default assignment
-    alu_in_b = ex_rs2_i;
-    if (ALU_B_IMM) begin
-      alu_in_b = ex_imm_i;
-      // Data forwarding logic
+    if (ex_ctrl_i.alu_a_sel == ALU_A_PC) begin
+      alu_in_a = ex_pc_i;
     end else begin
-      if (ex_ex_addr_match) begin
-        alu_in_b = ex_ex_fwd_rs2_i;
-      end
-      if (ex_mem_addr_match) begin
-        alu_in_b = ex_mem_fwd_rs2_i;
-      end
+      alu_in_a = fwd_rs1;
+    end
+  end
+
+  always_comb begin
+    if (ex_ctrl_i.alu_b_sel == ALU_B_IMM) begin
+      alu_in_b = ex_imm_i;
+    end else begin
+      alu_in_b = fwd_rs2;
     end
   end
 
@@ -101,22 +129,23 @@ module ex_stage(
   assign ex_reg_write_o      = reg_write_q;
   assign ex_wb_sel_o         = wb_sel_q;
   assign ex_pipeline_flush_o = pipeline_flush_q;
-  // The next address for branching or jump is calculated by the ALU
-  // uses the immediate or rs2 register assign ex_alu_res_o        = alu_res_q;
+  // ALU result forwarded to MEM stage (data memory address / WB data)
+  assign ex_alu_res_o        = alu_res_q;
+  // Branch/jump target address
   assign ex_target_pc_o      = alu_res_q;
 
-  // Value to be written to the Data mem
-  assign ex_rs2_o            = alu_in_b;
+  // Value to be written to the Data mem (forwarded rs2, not alu_in_b which may be imm)
+  assign ex_rs2_o            = fwd_rs2;
 
-  // Branch Comparator Logic
+  // Branch Comparator Logic (uses forwarded rs1/rs2)
   always_comb begin
     case (ex_ctrl_i.alu_br_op)
-      BR_EQ:  br_taken = (ex_rs1_i == ex_rs2_i);
-      BR_NE:  br_taken = (ex_rs1_i != ex_rs2_i);
-      BR_LT:  br_taken = ($signed(ex_rs1_i) <  $signed(ex_rs2_i));
-      BR_GE:  br_taken = ($signed(ex_rs1_i) >= $signed(ex_rs2_i));
-      BR_LTU: br_taken = (ex_rs1_i <  ex_rs2_i);
-      BR_GEU: br_taken = (ex_rs1_i >= ex_rs2_i);
+      BR_EQ:  br_taken = (fwd_rs1 == fwd_rs2);
+      BR_NE:  br_taken = (fwd_rs1 != fwd_rs2);
+      BR_LT:  br_taken = ($signed(fwd_rs1) <  $signed(fwd_rs2));
+      BR_GE:  br_taken = ($signed(fwd_rs1) >= $signed(fwd_rs2));
+      BR_LTU: br_taken = (fwd_rs1 <  fwd_rs2);
+      BR_GEU: br_taken = (fwd_rs1 >= fwd_rs2);
       default: br_taken = 1'b0;
     endcase
   end

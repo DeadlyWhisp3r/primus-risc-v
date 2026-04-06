@@ -11,13 +11,16 @@ module primus_risc_v_top(
   // Instruction fetch signals
   logic [31:0]  pc;
   logic [31:0]  if_ir;
+  logic [31:0]  if_pc;
   logic [31:0]  if_npc;
 
   // Instruction decode signals
   logic [31:0]  id_rs1;
   logic [31:0]  id_rs2;
+  logic [4:0]   id_rs1_addr;
   logic [4:0]   id_rs2_addr;
   logic [4:0]   id_rd_addr;
+  logic [31:0]  id_pc;
   logic [31:0]  id_npc;
   logic [31:0]  id_imm;
   ctrl_t        id_ctrl;
@@ -60,6 +63,10 @@ module primus_risc_v_top(
   // Mux to select next PC, high = branch taken
   assign pc = ex_pc_sel ? ex_target_pc : if_npc;
 
+  // MEM->EX forwarding: use load data for LOAD instructions, ALU result otherwise
+  logic [31:0] mem_fwd_data;
+  assign mem_fwd_data = (mem_wb_sel == WB_MEM) ? mem_rdata : mem_alu_res;
+
   // Instruction fetch stage
   if_stage a_if_stage (
     .clk_i            (clk_i),
@@ -67,6 +74,7 @@ module primus_risc_v_top(
     .pipeline_flush_i (ex_pipeline_flush),
     .pc_i             (pc),
     .ir_o             (if_ir),
+    .pc_o             (if_pc),
     .npc_o            (if_npc)
   );
 
@@ -75,6 +83,7 @@ module primus_risc_v_top(
     .clk_i            (clk_i),
     .rst_ni           (rst_ni),
     .pipeline_flush_i (ex_pipeline_flush),
+    .id_pc_i          (if_pc),
     .id_npc_i         (if_npc),
     .instr_i          (if_ir),
     .wb_w_addr_i      (wb_rd_addr),
@@ -82,8 +91,10 @@ module primus_risc_v_top(
     .wb_we_i          (wb_id_we),
     .id_rs1_o         (id_rs1),
     .id_rs2_o         (id_rs2),
+    .id_rs1_addr_o    (id_rs1_addr),
     .id_rs2_addr_o    (id_rs2_addr),
     .id_rd_addr_o     (id_rd_addr),
+    .pc_o             (id_pc),
     .npc_o            (id_npc),
     .imm_o            (id_imm),
     .id_ctrl_o        (id_ctrl)
@@ -92,13 +103,17 @@ module primus_risc_v_top(
   ex_stage a_ex_stage (
     .clk_i               (clk_i),
     .rst_ni              (rst_ni),
+    .ex_pc_i             (id_pc),
     .ex_npc_i            (id_npc),
     .ex_rs1_i            (id_rs1),
     .ex_rs2_i            (id_rs2),
     .ex_rd_addr_i        (id_rd_addr),
     .ex_imm_i            (id_imm),
+    .ex_ex_fwd_rs1_i     (ex_alu_res),
+    .ex_mem_fwd_rs1_i    (mem_fwd_data),
+    .ex_rs1_reg_addr_i   (id_rs1_addr),
     .ex_ex_fwd_rs2_i     (ex_alu_res),
-    .ex_mem_fwd_rs2_i    (mem_rdata),
+    .ex_mem_fwd_rs2_i    (mem_fwd_data),
     .ex_rs2_reg_addr_i   (id_rs2_addr),
     .ex_ctrl_i           (id_ctrl),
     .ex_npc_o            (ex_npc),
@@ -208,7 +223,7 @@ module primus_risc_v_top(
     .wb_npc_i      (mem_npc),
     .wb_alu_res_i  (mem_alu_res),
     .wb_rd_addr_i  (mem_rd_addr),
-    .wb_we_i       (ex_reg_write),
+    .wb_we_i       (mem_reg_write),
     .wb_sel_i      (mem_wb_sel),
 
   // Data written to the register file
