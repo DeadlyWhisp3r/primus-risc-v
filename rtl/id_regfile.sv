@@ -16,7 +16,10 @@ module id_regfile #(
   input logic [4:0] rs2_addr_i,
 
   output logic [DATA_WIDTH-1:0] rs1_o,
-  output logic [DATA_WIDTH-1:0] rs2_o
+  output logic [DATA_WIDTH-1:0] rs2_o,
+  // Direct register outputs for LED display
+  output logic [DATA_WIDTH-1:0] x1_o,
+  output logic [DATA_WIDTH-1:0] x2_o
 );
 
   // Implement 31 integer registers skipping x0 since
@@ -52,4 +55,6 @@ module id_regfile #(
   // specific register
   assign rs1_o = (rs1_addr_i == 5'b0) ? '0 : x_reg_q[rs1_addr_i];
   assign rs2_o = (rs2_addr_i == 5'b0) ? '0 : x_reg_q[rs2_addr_i];
+  assign x1_o  = x_reg_q[1];
+  assign x2_o  = x_reg_q[2];
 endmodule

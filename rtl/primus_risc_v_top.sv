@@ -3,8 +3,10 @@ import primus_core_pkg::*;
 
 module primus_risc_v_top(
   // Input for top module
-  input logic clk_i,
-  input rst_ni
+  input  logic        clk_i,
+  input  logic        rst_ni,
+  // LED outputs: LED[7:0] = x1[7:0], LED[15:8] = x2[7:0]
+  output logic [15:0] led_o
 );
 
 
@@ -67,6 +69,10 @@ module primus_risc_v_top(
   logic [4:0]  wb_rd_addr;
   logic        wb_id_we;
 
+  // Register file direct outputs for LEDs
+  logic [31:0] rf_x1, rf_x2;
+  assign led_o = {rf_x2[7:0], rf_x1[7:0]};
+
   // Assignments
   // Mux to select next PC, high = branch taken
   // EX correction has highest priority, then ID fast path, then sequential fetch
@@ -116,7 +122,9 @@ module primus_risc_v_top(
     .id_ctrl_o            (id_ctrl),
     .id_bp_taken_o        (id_bp_taken),
     .id_bp_target_o       (id_bp_target),
-    .id_predict_taken_o   (id_predict_taken)
+    .id_predict_taken_o   (id_predict_taken),
+    .x1_o                 (rf_x1),
+    .x2_o                 (rf_x2)
   );
 
   ex_stage a_ex_stage (

@@ -38,7 +38,10 @@ module id_stage(
   // The redirect target for the fast path (combinational)
   output logic [31:0] id_bp_target_o,
   // Registered prediction — tells EX whether the fast path was already used
-  output logic id_predict_taken_o
+  output logic id_predict_taken_o,
+  // Direct register file reads for LED display
+  output logic [31:0] x1_o,
+  output logic [31:0] x2_o
 );
 
   // Source registers rs1 & rs2
@@ -83,7 +86,9 @@ module id_stage(
     .rs1_addr_i(instr_i[19:15]),
     .rs2_addr_i(instr_i[24:20]),
     .rs1_o(id_rs1_d),
-    .rs2_o(id_rs2_d)
+    .rs2_o(id_rs2_d),
+    .x1_o(x1_o),
+    .x2_o(x2_o)
   );
 
 always_comb begin
