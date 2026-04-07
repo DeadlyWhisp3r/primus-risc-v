@@ -22,6 +22,7 @@ module ex_stage(
   input logic [31:0]  ex_ex_fwd_rs2_i,
   input logic [31:0]  ex_mem_fwd_rs2_i,
   input logic [4:0]   ex_rs2_reg_addr_i,
+  input logic         id_predict_taken_i,
 
   // Next program counter
   output logic [31:0] ex_npc_o,
@@ -40,9 +41,15 @@ module ex_stage(
   // Write enable for register file (WB stage)
   output logic        ex_reg_write_o,
   // Signal to flush the IF and ID stage if branch is taken since they have
-  // wrong instruction 
+  // wrong instruction
   output logic        ex_pipeline_flush_o,
-  output wb_sel_e     ex_wb_sel_o
+  // Combinational branch target — same cycle as flush, for same-cycle PC redirect
+  output logic [31:0] ex_npc_comb_o,
+  output wb_sel_e     ex_wb_sel_o,
+  // Actual branch outcome fed back to the branch predictor in ID
+  output logic        ex_br_taken_o,
+  // Enable for the predictor FSM — high only when a branch is in EX
+  output logic        ex_is_branch_o
   // NOTE: Pass the wb_sel so in the wb stage it knows what data to take.
 
 );
@@ -55,7 +62,6 @@ module ex_stage(
   logic [4:0]  rd_addr_q2,       rd_addr_q3;
   logic        mem_we_d,         mem_we_q;
   logic        reg_write_d,      reg_write_q;
-  logic        pipeline_flush_d, pipeline_flush_q;
   wb_sel_e     wb_sel_d,         wb_sel_q;
   logic        ex_ex_rs1_addr_match;
   logic        ex_mem_rs1_addr_match;
@@ -111,11 +117,14 @@ module ex_stage(
   end
 
   // Signal if there is a instruction jump or just increment by 4
-  assign pc_sel_d = (ex_ctrl_i.is_branch && br_taken) || ex_ctrl_i.is_jump;
+  assign pc_sel_d = (ex_ctrl_i.is_branch && br_taken  && !id_predict_taken_i) ||
+                  (ex_ctrl_i.is_branch && !br_taken &&  id_predict_taken_i) ||
+                  (ex_ctrl_i.is_jump   && !id_predict_taken_i);
 
   // Internal clocked signals next state
-  assign pipeline_flush_d    = ex_pc_sel_o; 
-  assign npc_d               = ex_npc_i;
+  // For branches/jumps use the ALU result (handles JALR rs1+imm correctly).
+  // For not-taken mispredictions ex_npc_i carries the sequential PC from ID.
+  assign npc_d = (br_taken || ex_ctrl_i.is_jump) ? alu_res_d : ex_npc_i;
   assign rd_addr_d           = ex_rd_addr_i;
   assign mem_we_d            = ex_ctrl_i.mem_write;
   assign reg_write_d         = ex_ctrl_i.reg_write;
@@ -128,7 +137,8 @@ module ex_stage(
   assign ex_mem_we_o         = mem_we_q;
   assign ex_reg_write_o      = reg_write_q;
   assign ex_wb_sel_o         = wb_sel_q;
-  assign ex_pipeline_flush_o = pipeline_flush_q;
+  assign ex_pipeline_flush_o = pc_sel_d;
+  assign ex_npc_comb_o       = npc_d;
   // ALU result forwarded to MEM stage (data memory address / WB data)
   assign ex_alu_res_o        = alu_res_q;
   // Branch/jump target address
@@ -136,6 +146,8 @@ module ex_stage(
 
   // Value to be written to the Data mem (forwarded rs2, not alu_in_b which may be imm)
   assign ex_rs2_o            = fwd_rs2;
+  assign ex_br_taken_o       = br_taken && ex_ctrl_i.is_branch;
+  assign ex_is_branch_o      = ex_ctrl_i.is_branch;
 
   // Branch Comparator Logic (uses forwarded rs1/rs2)
   always_comb begin
@@ -167,7 +179,6 @@ module ex_stage(
       rd_addr_q3       <= 5'b0;
       mem_we_q         <= 1'b0;
       reg_write_q      <= 1'b0;
-      pipeline_flush_q <= 1'b0;
       wb_sel_q         <= WB_ALU; // Default enum value
     end else begin
       npc_q            <= npc_d;
@@ -178,7 +189,6 @@ module ex_stage(
       rd_addr_q3       <= rd_addr_q2;
       mem_we_q         <= mem_we_d;
       reg_write_q      <= reg_write_d;
-      pipeline_flush_q <= pipeline_flush_d;
       wb_sel_q         <= wb_sel_d;
     end
   end

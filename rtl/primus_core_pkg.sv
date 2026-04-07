@@ -92,4 +92,12 @@ package primus_core_pkg;
     U_TYPE = 3'b100, // Upper Immediate: lui, auipc
     J_TYPE = 3'b101  // Jump: jal
   } instr_type_e;
+
+  // Enum for branch prediction
+  typedef enum logic [1:0] {
+    SNT = 2'b00, // Strongly Not Taken
+    WNT = 2'b01, // Weakly Not Taken
+    WT  = 2'b10, // Weakly Taken
+    ST  = 2'b11  // Strongly Taken
+  } br_predict_state_e;
 endpackage

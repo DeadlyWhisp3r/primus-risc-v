@@ -25,9 +25,17 @@ module primus_risc_v_top(
   logic [31:0]  id_imm;
   ctrl_t        id_ctrl;
 
+  // Branch predictor signals
+  logic         id_predict_taken;
+  logic         id_bp_taken;
+  logic [31:0]  id_bp_target;
+  logic         ex_br_taken;
+  logic         ex_is_branch;
+
   // Execute stage signals
   logic         ex_pipeline_flush;
   logic [31:0]  ex_npc;
+  logic [31:0]  ex_npc_comb;
   logic         ex_pc_sel;
   logic [31:0]  ex_target_pc;
   logic [31:0]  ex_rs2;
@@ -61,7 +69,13 @@ module primus_risc_v_top(
 
   // Assignments
   // Mux to select next PC, high = branch taken
-  assign pc = ex_pc_sel ? ex_target_pc : if_npc;
+  // EX correction has highest priority, then ID fast path, then sequential fetch
+  // ex_pipeline_flush (= pc_sel_d, combinational) is used instead of ex_pc_sel
+  // (= pc_sel_q, registered) so the PC redirects in the same cycle as the flush,
+  // preventing the BRAM from fetching one extra wrong instruction.
+  assign pc = ex_pipeline_flush                   ? ex_npc_comb  :
+              (id_bp_taken && !ex_pipeline_flush) ? id_bp_target :
+                                                    if_npc;
 
   // MEM->EX forwarding: use load data for LOAD instructions, ALU result otherwise
   logic [31:0] mem_fwd_data;
@@ -88,7 +102,9 @@ module primus_risc_v_top(
     .instr_i          (if_ir),
     .wb_w_addr_i      (wb_rd_addr),
     .wb_w_data_i      (wb_data),
-    .wb_we_i          (wb_id_we),
+    .wb_we_i              (wb_id_we),
+    .ex_id_branch_taken_i (ex_br_taken),
+    .ex_id_is_branch_i    (ex_is_branch),
     .id_rs1_o         (id_rs1),
     .id_rs2_o         (id_rs2),
     .id_rs1_addr_o    (id_rs1_addr),
@@ -96,8 +112,11 @@ module primus_risc_v_top(
     .id_rd_addr_o     (id_rd_addr),
     .pc_o             (id_pc),
     .npc_o            (id_npc),
-    .imm_o            (id_imm),
-    .id_ctrl_o        (id_ctrl)
+    .imm_o                (id_imm),
+    .id_ctrl_o            (id_ctrl),
+    .id_bp_taken_o        (id_bp_taken),
+    .id_bp_target_o       (id_bp_target),
+    .id_predict_taken_o   (id_predict_taken)
   );
 
   ex_stage a_ex_stage (
@@ -116,6 +135,7 @@ module primus_risc_v_top(
     .ex_mem_fwd_rs2_i    (mem_fwd_data),
     .ex_rs2_reg_addr_i   (id_rs2_addr),
     .ex_ctrl_i           (id_ctrl),
+    .id_predict_taken_i  (id_predict_taken),
     .ex_npc_o            (ex_npc),
     .ex_pc_sel_o         (ex_pc_sel),
     .ex_target_pc_o      (ex_target_pc),
@@ -125,7 +145,10 @@ module primus_risc_v_top(
     .ex_mem_we_o         (ex_mem_we),
     .ex_reg_write_o      (ex_reg_write),
     .ex_pipeline_flush_o (ex_pipeline_flush),
-    .ex_wb_sel_o         (ex_wb_sel)
+    .ex_npc_comb_o       (ex_npc_comb),
+    .ex_wb_sel_o         (ex_wb_sel),
+    .ex_br_taken_o       (ex_br_taken),
+    .ex_is_branch_o      (ex_is_branch)
   );
 
     mem_stage a_mem_stage (

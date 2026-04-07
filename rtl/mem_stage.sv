@@ -72,7 +72,7 @@ module mem_stage(
   assign mem_wb_sel_o  = mem_wb_sel_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni || pipeline_flush_i) begin
+    if (!rst_ni) begin
       mem_wb_rdata_q   <= 32'b0;
       mem_npc_q        <= 32'b0;
       mem_wb_alu_res_q <= 32'b0;

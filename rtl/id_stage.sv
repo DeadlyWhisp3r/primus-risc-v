@@ -13,6 +13,10 @@ module id_stage(
   input [4:0]  wb_w_addr_i,
   input [31:0] wb_w_data_i,
   input        wb_we_i,
+  // Actual branch outcome from EX (only valid when ex_id_is_branch_i is high)
+  input logic  ex_id_branch_taken_i,
+  // High when a branch instruction is in the EX stage — enables predictor update
+  input logic  ex_id_is_branch_i,
   
   // Output of source registers rs1 & rs2
   output [31:0] id_rs1_o,
@@ -28,7 +32,13 @@ module id_stage(
   // Immediate value
   output logic [31:0] imm_o,
   // Control signals for ex-stage
-  output ctrl_t id_ctrl_o
+  output ctrl_t id_ctrl_o,
+  // Whether the fast path redirected IF this cycle (combinational)
+  output logic        id_bp_taken_o,
+  // The redirect target for the fast path (combinational)
+  output logic [31:0] id_bp_target_o,
+  // Registered prediction — tells EX whether the fast path was already used
+  output logic id_predict_taken_o
 );
 
   // Source registers rs1 & rs2
@@ -45,16 +55,21 @@ module id_stage(
   // Funct3 and funct7 fields
   logic [2:0] funct3;
   logic       f7_bit;
+  // Branch prediction
+  br_predict_state_e br_pred_state_q, br_pred_state_d;
+  logic predict_taken_q, predict_taken_d;
+  logic ctr_predicts_taken; // Raw output of the 2-bit saturating counter (WT or ST)
 
-  assign id_rs1_o      = id_rs1_q;
-  assign id_rs2_o      = id_rs2_q;
-  assign id_rs1_addr_o = id_rs1_addr_q;
-  assign id_rs2_addr_o = id_rs2_addr_q;
-  assign id_rd_addr_o  = id_rd_addr_q;
-  assign pc_o          = pc_q;
-  assign npc_o         = npc_q;
-  assign imm_o        = imm_q;
-  assign id_ctrl_o    = ctrl_q;
+  assign id_rs1_o           = id_rs1_q;
+  assign id_rs2_o           = id_rs2_q;
+  assign id_rs1_addr_o      = id_rs1_addr_q;
+  assign id_rs2_addr_o      = id_rs2_addr_q;
+  assign id_rd_addr_o       = id_rd_addr_q;
+  assign pc_o               = pc_q;
+  assign npc_o              = npc_q;
+  assign imm_o              = imm_q;
+  assign id_ctrl_o          = ctrl_q;
+  assign id_predict_taken_o = predict_taken_q;
 
   instr_type_e instr_format;
 
@@ -162,8 +177,8 @@ always_comb begin
 
       LUI: begin
           ctrl_d.reg_write = 1;
-          ctrl_d.alu_a_sel = ALU_A_RS1; 
-          ctrl_d.alu_op    = ALU_COPY_B; 
+          ctrl_d.alu_b_sel = ALU_B_IMM;
+          ctrl_d.alu_op    = ALU_COPY_B;
       end
 
       AUIPC: begin
@@ -249,33 +264,67 @@ always_comb begin
     endcase
   end
 
+
+  // Branch prediction logic
+  // Sequential logic to update state
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni)
+      br_pred_state_q <= SNT;
+    else if (ex_id_is_branch_i)
+      br_pred_state_q <= br_pred_state_d;
+  end
+  // Combinational logic for state transitions
+  always_comb begin
+    case (br_pred_state_q)
+      SNT: br_pred_state_d = ex_id_branch_taken_i ? WNT : SNT;
+      WNT: br_pred_state_d = ex_id_branch_taken_i ? WT  : SNT;
+      WT : br_pred_state_d = ex_id_branch_taken_i ? ST  : WNT;
+      ST : br_pred_state_d = ex_id_branch_taken_i ? ST  : WT;
+    endcase
+  end
+
+  // Prediction output
+  assign ctr_predicts_taken = (br_pred_state_q == WT || br_pred_state_q == ST);
+
+  // predict_taken_d: high when the fast path fires for the current instruction in ID.
+  // J_TYPE always redirects; B_TYPE redirects only when the counter predicts taken.
+  assign predict_taken_d = (instr_format == B_TYPE && ctr_predicts_taken) ||
+                            (instr_format == J_TYPE);
+
+  // Fast path outputs used by the top-level PC mux
+  assign id_bp_taken_o  = predict_taken_d;
+  assign id_bp_target_o = id_pc_i + imm_d;
+
   always_comb begin
     pc_d  = id_pc_i;
+    // NPC is always sequential; EX uses alu_res_d for the actual redirect address.
     npc_d = id_npc_i;
   end
 
   always_ff @(negedge(rst_ni) or posedge(clk_i)) begin
     // Active low reset and pipeline flush
     if(!rst_ni || pipeline_flush_i) begin
-      id_rs1_q      <= 'b0;
-      id_rs2_q      <= 'b0;
-      id_rs1_addr_q <= 'b0;
-      id_rs2_addr_q <= 'b0;
-      id_rd_addr_q  <= 'b0;
-      pc_q          <= 'b0;
-      npc_q         <= 'b0;
-      imm_q         <= 'b0;
-      ctrl_q        <= 'b0;
+      id_rs1_q        <= 'b0;
+      id_rs2_q        <= 'b0;
+      id_rs1_addr_q   <= 'b0;
+      id_rs2_addr_q   <= 'b0;
+      id_rd_addr_q    <= 'b0;
+      pc_q            <= 'b0;
+      npc_q           <= 'b0;
+      imm_q           <= 'b0;
+      ctrl_q          <= 'b0;
+      predict_taken_q <= 'b0;
     end else begin
-      id_rs1_q      <= id_rs1_d;
-      id_rs2_q      <= id_rs2_d;
-      id_rs1_addr_q <= id_rs1_addr_d;
-      id_rs2_addr_q <= id_rs2_addr_d;
-      id_rd_addr_q  <= id_rd_addr_d;
-      pc_q          <= pc_d;
-      npc_q         <= npc_d;
-      imm_q         <= imm_d;
-      ctrl_q        <= ctrl_d;
+      id_rs1_q        <= id_rs1_d;
+      id_rs2_q        <= id_rs2_d;
+      id_rs1_addr_q   <= id_rs1_addr_d;
+      id_rs2_addr_q   <= id_rs2_addr_d;
+      id_rd_addr_q    <= id_rd_addr_d;
+      pc_q            <= pc_d;
+      npc_q           <= npc_d;
+      imm_q           <= imm_d;
+      ctrl_q          <= ctrl_d;
+      predict_taken_q <= predict_taken_d;
     end
   end
 

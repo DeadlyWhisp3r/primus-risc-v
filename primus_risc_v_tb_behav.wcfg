@@ -12,15 +12,15 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="75.637 ns"></ZoomStartTime>
-      <ZoomEndTime time="151.223 ns"></ZoomEndTime>
-      <Cursor1Time time="110.554 ns"></Cursor1Time>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="2,095.000 ns"></ZoomEndTime>
+      <Cursor1Time time="615.000 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="276"></NameColumnWidth>
-      <ValueColumnWidth column_width="88"></ValueColumnWidth>
+      <NameColumnWidth column_width="303"></NameColumnWidth>
+      <ValueColumnWidth column_width="84"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="48" />
+   <WVObjectSize size="51" />
    <wvobject type="logic" fp_name="/primus_risc_v_tb/clk_i">
       <obj_property name="ElementShortName">clk_i</obj_property>
       <obj_property name="ObjectShortName">clk_i</obj_property>
@@ -36,6 +36,18 @@
    <wvobject type="logic" fp_name="/primus_risc_v_tb/uut/rst_ni">
       <obj_property name="ElementShortName">rst_ni</obj_property>
       <obj_property name="ObjectShortName">rst_ni</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/primus_risc_v_tb/uut/a_id_stage/wb_we_i">
+      <obj_property name="ElementShortName">wb_we_i</obj_property>
+      <obj_property name="ObjectShortName">wb_we_i</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/primus_risc_v_tb/uut/a_id_stage/instr_i">
+      <obj_property name="ElementShortName">instr_i[31:0]</obj_property>
+      <obj_property name="ObjectShortName">instr_i[31:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/primus_risc_v_tb/uut/a_id_stage/instr_format">
+      <obj_property name="ElementShortName">instr_format[2:0]</obj_property>
+      <obj_property name="ObjectShortName">instr_format[2:0]</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/primus_risc_v_tb/uut/pc">
       <obj_property name="ElementShortName">pc[31:0]</obj_property>
@@ -56,10 +68,12 @@
    <wvobject type="array" fp_name="/primus_risc_v_tb/uut/a_ex_stage/inst_ex_alu/op_a_i">
       <obj_property name="ElementShortName">op_a_i[31:0]</obj_property>
       <obj_property name="ObjectShortName">op_a_i[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/primus_risc_v_tb/uut/a_ex_stage/inst_ex_alu/op_b_i">
       <obj_property name="ElementShortName">op_b_i[31:0]</obj_property>
       <obj_property name="ObjectShortName">op_b_i[31:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/primus_risc_v_tb/uut/a_ex_stage/ex_rs1_i">
       <obj_property name="ElementShortName">ex_rs1_i[31:0]</obj_property>
