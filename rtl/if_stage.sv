@@ -8,6 +8,11 @@ module if_stage (
   input logic         pipeline_flush_i,
   input logic [31:0]  pc_i,      // Program counter
 
+  // Port B — bootloader writes new program into instruction memory
+  input logic         imem_we_b_i,
+  input logic [9:0]   imem_addr_b_i,   // word-aligned (byte_addr[11:2])
+  input logic [31:0]  imem_data_b_i,
+
   // writer interface
   output logic [31:0] ir_o,      // Instruction register
   output logic [31:0] pc_o,      // Current PC (for branch/jump target calculation)
@@ -17,30 +22,52 @@ module if_stage (
 
   logic [31:0] pc_d, pc_q, ir_d, ir_q, npc_d, npc_q;
 
-  // Instantiate module instruction memory
-  // XPM Single Port RAM for Instruction Memory
-  xpm_memory_spram #(
-    .ADDR_WIDTH_A        (10),              // 1024 words = 10 bits
-    .MEMORY_PRIMITIVE    ("block"),         // Use BRAM
-    .MEMORY_SIZE         (32768),           // 1024 words * 32 bits = 32768 bits
-    .READ_DATA_WIDTH_A   (32),              // RISC-V Instruction width
-    .READ_LATENCY_A      (1),               // 1 clock cycle latency
+  // Instruction memory — True Dual-Port BRAM
+  // Port A: instruction fetch (read-only, used by IF stage)
+  // Port B: bootloader write port (write-only, driven from top-level)
+  xpm_memory_tdpram #(
+    .ADDR_WIDTH_A        (10),              // 1024 words
+    .ADDR_WIDTH_B        (10),
+    .CLOCKING_MODE       ("common_clock"),  // single clock domain
+    .MEMORY_PRIMITIVE    ("block"),
+    .MEMORY_SIZE         (32768),           // 1024 * 32 bits
+    .READ_DATA_WIDTH_A   (32),
+    .READ_DATA_WIDTH_B   (32),
     .WRITE_DATA_WIDTH_A  (32),
-    .MEMORY_INIT_FILE    ("instructions.mem"), // The file we created earlier
+    .WRITE_DATA_WIDTH_B  (32),
+    .READ_LATENCY_A      (1),
+    .READ_LATENCY_B      (1),
+    .MEMORY_INIT_FILE    ("instructions.mem"),
     .MEMORY_INIT_PARAM   ("0"),
-    .USE_MEM_INIT        (1)                // Enable memory initialization
+    .USE_MEM_INIT        (1)
   ) a_inst_mem (
-    .clka   (clk_i),
-    .rsta   (~rst_ni),                      // Active high reset for XPM
-    .ena    (1'b1),                         // Always enabled
-    .wea    (1'b0),                         // Read-only
-    .addra  (pc_d[11:2]),                   // Word-aligned address
-    .dina   (32'b0),
-    .douta  (ir_d),                         // Data out to Decode stage
-    .regcea (1'b1),
-    .injectdbiterra(1'b0),
-    .injectsbiterra(1'b0),
-    .sleep  (1'b0)
+    // Port A — fetch (read-only)
+    .clka           (clk_i),
+    .rsta           (~rst_ni),
+    .ena            (1'b1),
+    .wea            (1'b0),
+    .addra          (pc_d[11:2]),
+    .dina           (32'b0),
+    .douta          (ir_d),
+    .regcea         (1'b1),
+    .injectdbiterra (1'b0),
+    .injectsbiterra (1'b0),
+    .dbiterra       (),
+    .sbiterra       (),
+    // Port B — bootloader write
+    .clkb           (clk_i),
+    .rstb           (~rst_ni),
+    .enb            (1'b1),
+    .web            (imem_we_b_i),
+    .addrb          (imem_addr_b_i),
+    .dinb           (imem_data_b_i),
+    .doutb          (),                     // unused — we never read via Port B
+    .regceb         (1'b1),
+    .injectdbiterrb (1'b0),
+    .injectsbiterrb (1'b0),
+    .dbiterrb       (),
+    .sbiterrb       (),
+    .sleep          (1'b0)
   );
 
   // input assignments

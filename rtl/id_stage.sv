@@ -6,6 +6,8 @@ module id_stage(
   input rst_ni,
   // Flush the pipeline, usually a branch taken -> grabage in the pipe
   input pipeline_flush_i,
+  // Stall: load-use hazard — inject bubble into ID/EX register, re-fetch same instruction
+  input logic stall_i,
   input [31:0] id_pc_i,
   input [31:0] id_npc_i,
   input [31:0] instr_i,
@@ -57,7 +59,8 @@ module id_stage(
   ctrl_t ctrl_d, ctrl_q;
   // Funct3 and funct7 fields
   logic [2:0] funct3;
-  logic       f7_bit;
+  logic       f7_bit;  // instr[30] = funct7[5]: distinguishes ADD/SUB and SRL/SRA
+  logic       m_ext;   // instr[25] = funct7[0]: set for all RV32M instructions
   // Branch prediction
   br_predict_state_e br_pred_state_q, br_pred_state_d;
   logic predict_taken_q, predict_taken_d;
@@ -98,6 +101,7 @@ always_comb begin
     ctrl_d.alu_op     = ALU_ADD;
     ctrl_d.mem_read   = 0;
     ctrl_d.mem_write  = 0;
+    ctrl_d.mem_op     = MEM_W;
     ctrl_d.reg_write  = 0;
     ctrl_d.wb_sel     = WB_ALU;
     ctrl_d.is_branch  = 0;
@@ -107,6 +111,8 @@ always_comb begin
     funct3 = instr_i[14:12];
     // Bit 30 distinguishes ADD/SUB and SRL/SRA
     f7_bit = instr_i[30];
+    // Bit 25 is set for all RV32M instructions (MUL/DIV family)
+    m_ext  = instr_i[25];
     // Register to write results to
     id_rd_addr_d  = instr_i[11:7];
     // Source register addresses, pipelined for forwarding
@@ -118,8 +124,21 @@ always_comb begin
     case (opcode_e'(instr_i[6:0])) // Static cast for readability
     OP: begin
           ctrl_d.reg_write = 1;
-          // Look at funct3 and the bit 30 modifier
-          case (funct3)
+          if (m_ext) begin
+            // RV32M: funct7 = 0000001 — multiply/divide family
+            case (funct3)
+              3'b000: ctrl_d.alu_op = ALU_MUL;
+              3'b001: ctrl_d.alu_op = ALU_MULH;
+              3'b010: ctrl_d.alu_op = ALU_MULHSU;
+              3'b011: ctrl_d.alu_op = ALU_MULHU;
+              3'b100: ctrl_d.alu_op = ALU_DIV;
+              3'b101: ctrl_d.alu_op = ALU_DIVU;
+              3'b110: ctrl_d.alu_op = ALU_REM;
+              3'b111: ctrl_d.alu_op = ALU_REMU;
+            endcase
+          end else begin
+            // RV32I: look at funct3 and the bit-30 modifier
+            case (funct3)
               3'b000: ctrl_d.alu_op = f7_bit ? ALU_SUB : ALU_ADD;
               3'b001: ctrl_d.alu_op = ALU_SLL;
               3'b010: ctrl_d.alu_op = ALU_SLT;
@@ -128,7 +147,8 @@ always_comb begin
               3'b101: ctrl_d.alu_op = f7_bit ? ALU_SRA : ALU_SRL;
               3'b110: ctrl_d.alu_op = ALU_OR;
               3'b111: ctrl_d.alu_op = ALU_AND;
-          endcase
+            endcase
+          end
     end
      OP_IMM: begin
           ctrl_d.reg_write = 1;
@@ -153,6 +173,14 @@ always_comb begin
           ctrl_d.alu_op    = ALU_ADD; // Address calculation (rs1 + offset)
           ctrl_d.mem_read  = 1;
           ctrl_d.wb_sel    = WB_MEM;
+          case (funct3)
+            3'b000: ctrl_d.mem_op = MEM_B;   // LB
+            3'b001: ctrl_d.mem_op = MEM_H;   // LH
+            3'b010: ctrl_d.mem_op = MEM_W;   // LW
+            3'b100: ctrl_d.mem_op = MEM_BU;  // LBU
+            3'b101: ctrl_d.mem_op = MEM_HU;  // LHU
+            default: ctrl_d.mem_op = MEM_W;
+          endcase
       end
 
       STORE: begin
@@ -160,6 +188,11 @@ always_comb begin
           ctrl_d.alu_b_sel = ALU_B_IMM;
           ctrl_d.alu_op    = ALU_ADD; // Address calculation (rs1 + offset)
           ctrl_d.mem_write = 1;
+          case (funct3)
+            3'b000: ctrl_d.mem_op = MEM_B;  // SB
+            3'b001: ctrl_d.mem_op = MEM_H;  // SH
+            default: ctrl_d.mem_op = MEM_W; // SW
+          endcase
       end
 
       BRANCH: begin
@@ -319,6 +352,14 @@ always_comb begin
       imm_q           <= 'b0;
       ctrl_q          <= 'b0;
       predict_taken_q <= 'b0;
+    end else if (stall_i) begin
+      // Load-use hazard: inject bubble (NOP) into ID/EX register.
+      // The PC mux will re-present the same instruction address to the BRAM,
+      // so the consumer instruction will be re-decoded next cycle.
+      ctrl_q          <= 'b0;   // all control enables cleared = NOP
+      id_rd_addr_q    <= 'b0;   // rd = x0 prevents spurious forwarding matches
+      predict_taken_q <= 'b0;
+      // rs1/rs2/pc/npc/imm don't matter since ctrl is all zeros
     end else begin
       id_rs1_q        <= id_rs1_d;
       id_rs2_q        <= id_rs2_d;

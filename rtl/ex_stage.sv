@@ -49,8 +49,9 @@ module ex_stage(
   // Actual branch outcome fed back to the branch predictor in ID
   output logic        ex_br_taken_o,
   // Enable for the predictor FSM — high only when a branch is in EX
-  output logic        ex_is_branch_o
-  // NOTE: Pass the wb_sel so in the wb stage it knows what data to take.
+  output logic        ex_is_branch_o,
+  // Memory access op forwarded to MEM for load/store width and sign extension
+  output mem_op_e     ex_mem_op_o
 
 );
 
@@ -63,6 +64,11 @@ module ex_stage(
   logic        mem_we_d,         mem_we_q;
   logic        reg_write_d,      reg_write_q;
   wb_sel_e     wb_sel_d,         wb_sel_q;
+  // rs2 must be registered: when a STORE is in MEM, fwd_rs2 already reflects the
+  // next instruction in EX, not the store's data.  Capture it here so mem_rs2_data_i
+  // always carries the value computed while that instruction was in EX.
+  logic [31:0] rs2_q;
+  mem_op_e     mem_op_d,        mem_op_q;
   logic        ex_ex_rs1_addr_match;
   logic        ex_mem_rs1_addr_match;
   logic        ex_ex_addr_match;
@@ -75,10 +81,14 @@ module ex_stage(
   logic [31:0] fwd_rs2;
   logic        br_taken;
 
-  assign ex_ex_rs1_addr_match  = (ex_rs1_reg_addr_i == rd_addr_q);
-  assign ex_mem_rs1_addr_match = (ex_rs1_reg_addr_i == rd_addr_q2);
-  assign ex_ex_addr_match      = (ex_rs2_reg_addr_i == rd_addr_q);
-  assign ex_mem_addr_match     = (ex_rs2_reg_addr_i == rd_addr_q2);
+  // rd_addr != 0 guard: x0 is hardwired to zero and never a valid forwarding source.
+  // Without this, a NOP bubble (rd_addr_q = 0 from the load-use stall injecting id_rd_addr_q <= 0)
+  // spuriously matches any instruction that reads x0 (e.g. beqz = beq rs1, x0, offset),
+  // forwarding stale alu_res_q instead of the correct zero.
+  assign ex_ex_rs1_addr_match  = (ex_rs1_reg_addr_i == rd_addr_q)  && (rd_addr_q  != 5'b0);
+  assign ex_mem_rs1_addr_match = (ex_rs1_reg_addr_i == rd_addr_q2) && (rd_addr_q2 != 5'b0);
+  assign ex_ex_addr_match      = (ex_rs2_reg_addr_i == rd_addr_q)  && (rd_addr_q  != 5'b0);
+  assign ex_mem_addr_match     = (ex_rs2_reg_addr_i == rd_addr_q2) && (rd_addr_q2 != 5'b0);
 
   // Forwarded rs1 — used by branch comparator regardless of alu_a_sel
   always_comb begin
@@ -129,6 +139,7 @@ module ex_stage(
   assign mem_we_d            = ex_ctrl_i.mem_write;
   assign reg_write_d         = ex_ctrl_i.reg_write;
   assign wb_sel_d            = ex_ctrl_i.wb_sel;
+  assign mem_op_d            = ex_ctrl_i.mem_op;
 
   // Outputs assigned by current state
   assign ex_pc_sel_o         = pc_sel_q;
@@ -145,9 +156,10 @@ module ex_stage(
   assign ex_target_pc_o      = alu_res_q;
 
   // Value to be written to the Data mem (forwarded rs2, not alu_in_b which may be imm)
-  assign ex_rs2_o            = fwd_rs2;
+  assign ex_rs2_o            = rs2_q;
   assign ex_br_taken_o       = br_taken && ex_ctrl_i.is_branch;
   assign ex_is_branch_o      = ex_ctrl_i.is_branch;
+  assign ex_mem_op_o         = mem_op_q;
 
   // Branch Comparator Logic (uses forwarded rs1/rs2)
   always_comb begin
@@ -180,6 +192,8 @@ module ex_stage(
       mem_we_q         <= 1'b0;
       reg_write_q      <= 1'b0;
       wb_sel_q         <= WB_ALU; // Default enum value
+      rs2_q            <= 32'b0;
+      mem_op_q         <= MEM_W;
     end else begin
       npc_q            <= npc_d;
       pc_sel_q         <= pc_sel_d;
@@ -187,9 +201,11 @@ module ex_stage(
       rd_addr_q        <= rd_addr_d;
       rd_addr_q2       <= rd_addr_q;
       rd_addr_q3       <= rd_addr_q2;
+      rs2_q            <= fwd_rs2;
       mem_we_q         <= mem_we_d;
       reg_write_q      <= reg_write_d;
       wb_sel_q         <= wb_sel_d;
+      mem_op_q         <= mem_op_d;
     end
   end
 

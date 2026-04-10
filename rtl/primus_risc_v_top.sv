@@ -6,7 +6,10 @@ module primus_risc_v_top(
   input  logic        clk_i,
   input  logic        rst_ni,
   // LED outputs: LED[7:0] = x1[7:0], LED[15:8] = x2[7:0]
-  output logic [15:0] led_o
+  output logic [15:0] led_o,
+  // UART (USB-UART bridge on Nexys 4)
+  input  logic        uart_rx_i,
+  output logic        uart_tx_o
 );
 
 
@@ -46,12 +49,13 @@ module primus_risc_v_top(
   logic         ex_mem_we;
   logic         ex_reg_write;
   wb_sel_e      ex_wb_sel;
+  mem_op_e      ex_mem_op;
 
   // Signals to the Data memory
   logic [31:0]  dmem_addr;
   logic [31:0]  dmem_wdata;
   logic [31:0]  dmem_rdata;
-  logic         dmem_we;
+  logic [3:0]   dmem_we;
   // ECC Error Signals (Unused since ECC is disabled)
   logic dmem_dbiterra;
   logic dmem_sbiterra;
@@ -73,13 +77,106 @@ module primus_risc_v_top(
   logic [31:0] rf_x1, rf_x2;
   assign led_o = {rf_x2[7:0], rf_x1[7:0]};
 
+  // -----------------------------------------------------------------------
+  // UART peripheral — memory mapped at 0x0000_2000
+  //   0x2000  UART_TX  (SW: write byte to transmit)
+  //   0x2004  UART_RX  (LW: read last received byte)
+  //   0x2008  UART_ST  (LW: bit0 = tx_ready, bit1 = rx_data_valid)
+  // -----------------------------------------------------------------------
+  logic [7:0] uart_rx_data;
+  logic       uart_rx_valid;   // 1-cycle pulse from uart module
+  logic [7:0] uart_tx_data_in;
+  logic       uart_tx_valid;
+  logic       uart_tx_ready;
+
+  // Capture RX byte; stays valid until CPU reads UART_RX
+  logic [7:0] uart_rx_buf;
+  logic       uart_rx_buf_valid;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      uart_rx_buf       <= '0;
+      uart_rx_buf_valid <= 1'b0;
+    end else begin
+      if (uart_rx_valid)
+        uart_rx_buf <= uart_rx_data;
+
+      // Set on new byte, clear when CPU reads UART_RX (LW, no write)
+      if (uart_rx_valid)
+        uart_rx_buf_valid <= 1'b1;
+      // |(|dmem_we): reduction-OR collapses the 4-bit byte-enable vector to a single
+      // boolean — true if any byte is being written. Negated here to detect a pure
+      // read (no bytes written) to the UART_RX address, which clears the valid flag.
+      else if (!(|dmem_we) && (dmem_addr == 32'h0000_2004))
+        uart_rx_buf_valid <= 1'b0;
+    end
+  end
+
+  // Address decode (using word-aligned address from ALU result)
+  logic addr_is_uart;
+  assign addr_is_uart = (dmem_addr[15:12] == 4'h2);  // 0x2000 – 0x2FFF
+
+  // Peripheral read data mux — combinatorial, sampled by mem_stage's pipeline FF.
+  // dmem_addr (= alu_res_q) is stable for the full MEM cycle, so this is captured
+  // correctly by mem_wb_rdata_q at the end of the MEM stage cycle.
+  logic [31:0] periph_rdata;
+  always_comb begin
+    if (addr_is_uart) begin
+      case (dmem_addr[3:2])
+        2'b00:   periph_rdata = {24'b0, uart_tx_data_in};
+        2'b01:   periph_rdata = {24'b0, uart_rx_buf};
+        2'b10:   periph_rdata = {30'b0, uart_rx_buf_valid, uart_tx_ready};
+        default: periph_rdata = '0;
+      endcase
+    end else begin
+      periph_rdata = dmem_rdata;
+    end
+  end
+
+  // TX fires for one cycle when CPU stores to UART_TX address.
+  // |dmem_we: reduction-OR — true if any byte-enable is active (i.e. a store is happening).
+  assign uart_tx_valid   = |dmem_we && addr_is_uart && (dmem_addr[3:2] == 2'b00);
+  assign uart_tx_data_in = dmem_wdata[7:0];
+
+  // Address decode for instruction memory (0x0000 – 0x0FFF)
+  logic addr_is_imem;
+  assign addr_is_imem = (dmem_addr[15:12] == 4'h0);
+
+  // Port B signals driven into if_stage for bootloader writes
+  logic        imem_we_b;
+  logic [9:0]  imem_addr_b;
+  logic [31:0] imem_data_b;
+  assign imem_we_b   = |dmem_we && addr_is_imem;  // reduction-OR: any active byte-enable means a store
+  assign imem_addr_b = dmem_addr[11:2];
+  assign imem_data_b = dmem_wdata;
+
+  // Gate data BRAM write enable — neither UART nor imem stores should hit it.
+  // {4{condition}} replicates the 1-bit address-decode result into a 4-bit mask
+  // (4'b1111 or 4'b0000) so a bitwise & can zero out all byte-enables at once
+  // without losing the individual per-byte pattern when the address is valid.
+  logic [3:0] dmem_we_bram;
+  assign dmem_we_bram = dmem_we & {4{!addr_is_uart && !addr_is_imem}};
+
+  // Load-use hazard detection:
+  // When the instruction in EX is a load (WB_MEM) and the instruction currently
+  // being decoded in ID reads from the same destination register, we must stall
+  // for one cycle. The BRAM output (if_ir) is the instruction being decoded in ID.
+  // if_ir[19:15] = rs1, if_ir[24:20] = rs2 of the consumer instruction.
+  logic load_use_hazard;
+  assign load_use_hazard = !ex_pipeline_flush              // don't stall during a flush
+                         && (id_ctrl.wb_sel == WB_MEM)   // instruction NOW in EX is a load
+                         && id_ctrl.reg_write            // it writes to a register
+                         && (id_rd_addr != 5'b0)         // rd is not x0
+                         && ((if_ir[19:15] == id_rd_addr) ||  // rs1 match
+                             (if_ir[24:20] == id_rd_addr));   // rs2 match
+
   // Assignments
   // Mux to select next PC, high = branch taken
-  // EX correction has highest priority, then ID fast path, then sequential fetch
-  // ex_pipeline_flush (= pc_sel_d, combinational) is used instead of ex_pc_sel
-  // (= pc_sel_q, registered) so the PC redirects in the same cycle as the flush,
-  // preventing the BRAM from fetching one extra wrong instruction.
+  // Priority: EX flush > load-use stall > ID branch prediction > sequential
+  // On a load-use stall, replay if_pc (= pc_q from IF stage = address of the
+  // instruction currently in ID) so the BRAM re-fetches it next cycle.
   assign pc = ex_pipeline_flush                   ? ex_npc_comb  :
+              load_use_hazard                     ? if_pc        :
               (id_bp_taken && !ex_pipeline_flush) ? id_bp_target :
                                                     if_npc;
 
@@ -93,6 +190,9 @@ module primus_risc_v_top(
     .rst_ni           (rst_ni),
     .pipeline_flush_i (ex_pipeline_flush),
     .pc_i             (pc),
+    .imem_we_b_i      (imem_we_b),
+    .imem_addr_b_i    (imem_addr_b),
+    .imem_data_b_i    (imem_data_b),
     .ir_o             (if_ir),
     .pc_o             (if_pc),
     .npc_o            (if_npc)
@@ -103,6 +203,7 @@ module primus_risc_v_top(
     .clk_i            (clk_i),
     .rst_ni           (rst_ni),
     .pipeline_flush_i (ex_pipeline_flush),
+    .stall_i          (load_use_hazard),
     .id_pc_i          (if_pc),
     .id_npc_i         (if_npc),
     .instr_i          (if_ir),
@@ -156,7 +257,8 @@ module primus_risc_v_top(
     .ex_npc_comb_o       (ex_npc_comb),
     .ex_wb_sel_o         (ex_wb_sel),
     .ex_br_taken_o       (ex_br_taken),
-    .ex_is_branch_o      (ex_is_branch)
+    .ex_is_branch_o      (ex_is_branch),
+    .ex_mem_op_o         (ex_mem_op)
   );
 
     mem_stage a_mem_stage (
@@ -169,13 +271,14 @@ module primus_risc_v_top(
     .mem_rs2_data_i       (ex_rs2),    // Data to be stored
     .mem_rd_addr_i        (ex_rd_addr),
     .mem_ram_we_i         (ex_mem_we),   // Control signal for RAM WE
+    .mem_mem_op_i         (ex_mem_op),
     .mem_reg_we_i         (ex_reg_write),
 
-    // Interface to Data RAM (Combinational)
-    .mem_ram_rdata_i      (dmem_rdata),
+    // Interface to Data RAM / peripheral bus (Combinational)
+    .mem_ram_rdata_i      (periph_rdata),
     .mem_ram_addr_o       (dmem_addr),
     .mem_ram_wdata_o      (dmem_wdata),
-    .mem_ram_we_o         (dmem_we),
+    .mem_ram_wbe_o        (dmem_we),
 
     // Outputs to WB Stage Boundary (Inputs to MEM/WB Reg)
     .mem_wb_rdata_o       (mem_rdata),
@@ -193,7 +296,7 @@ module primus_risc_v_top(
    xpm_memory_spram #(
       .ADDR_WIDTH_A(6),              // 2^6 = 64 words
       .AUTO_SLEEP_TIME(0),           // DECIMAL
-      .BYTE_WRITE_WIDTH_A(32),       // DECIMAL
+      .BYTE_WRITE_WIDTH_A(8),        // DECIMAL — byte-wide enables (wea is 4 bits)
       .CASCADE_HEIGHT(0),            // DECIMAL
       .ECC_BIT_RANGE("7:0"),         // String
       .ECC_MODE("no_ecc"),           // String
@@ -240,7 +343,7 @@ module primus_risc_v_top(
                                        // douta to the value specified by parameter READ_RESET_VALUE_A.
 
       .sleep(1'b0),                   // 1-bit input: sleep signal to enable the dynamic power saving feature.
-      .wea(dmem_we)                        // WRITE_DATA_WIDTH_A/BYTE_WRITE_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit
+      .wea(dmem_we_bram)                   // WRITE_DATA_WIDTH_A/BYTE_WRITE_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit
                                        // wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one
                                        // byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when
                                        // WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
@@ -248,6 +351,19 @@ module primus_risc_v_top(
    );
 
    // End of xpm_memory_spram_inst instantiation
+
+  // UART peripheral
+  uart #(.CLK_HZ(100_000_000)) a_uart (
+    .clk_i      (clk_i),
+    .rst_ni     (rst_ni),
+    .rx_i       (uart_rx_i),
+    .rx_data_o  (uart_rx_data),
+    .rx_valid_o (uart_rx_valid),
+    .tx_o       (uart_tx_o),
+    .tx_data_i  (uart_tx_data_in),
+    .tx_valid_i (uart_tx_valid),
+    .tx_ready_o (uart_tx_ready)
+  );
 
   wb_stage a_wb_stage (
     .wb_rdata_i    (mem_rdata),

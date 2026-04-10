@@ -5,7 +5,7 @@
 
 # Clock signal
 set_property -dict { PACKAGE_PIN E3    IOSTANDARD LVCMOS33 } [get_ports { clk_i }]; #IO_L12P_T1_MRCC_35 Sch=clk100mhz
-create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports {clk_i}];
+create_clock -add -name sys_clk_pin -period 12.00 -waveform {0 6} [get_ports {clk_i}];
 
 
 ##Switches
@@ -80,6 +80,10 @@ set_property -dict { PACKAGE_PIN U13   IOSTANDARD LVCMOS33 } [get_ports { an[7] 
 ##Buttons
 
 set_property -dict { PACKAGE_PIN C12   IOSTANDARD LVCMOS33 } [get_ports { rst_ni }]; #IO_L3P_T0_DQS_AD1P_15 Sch=cpu_resetn
+
+## USB-UART Bridge (FT2232HQ)
+set_property -dict { PACKAGE_PIN C4    IOSTANDARD LVCMOS33 } [get_ports { uart_rx_i }]; #IO_L7P_T1_AD6P_35   Sch=uart_txd_in  (FTDI TX -> FPGA RX)
+set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { uart_tx_o }]; #IO_L11N_T1_SRCC_35  Sch=uart_rxd_out (FPGA TX -> FTDI RX)
 
 #set_property -dict { PACKAGE_PIN N17   IOSTANDARD LVCMOS33 } [get_ports { BTNC }]; #IO_L9P_T1_DQS_14 Sch=btnc
 #set_property -dict { PACKAGE_PIN M18   IOSTANDARD LVCMOS33 } [get_ports { BTNU }]; #IO_L4N_T0_D05_14 Sch=btnu
